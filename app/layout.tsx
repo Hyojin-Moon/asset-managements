@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
+import { PWARegister } from '@/components/pwa-register'
 import './globals.css'
 
 const geistMono = Geist_Mono({
@@ -37,9 +38,13 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#FF85A2" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className={`${geistMono.variable} antialiased`}>
         {children}
+        <PWARegister />
         <Toaster
           position="top-center"
           toastOptions={{
