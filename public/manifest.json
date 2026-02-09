@@ -2,6 +2,7 @@
   "name": "우리 가계부",
   "short_name": "가계부",
   "description": "우리 가족 자산관리 앱",
+  "id": "/dashboard",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#FFF8F9",
