@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* --- Cute Pastel Color Palette --- */
+  --color-background: #FFF8F9;
+  --color-foreground: #3D3042;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #FFF0F3;
+
+  /* Primary - Soft Pink */
+  --color-primary: #FF85A2;
+  --color-primary-light: #FFB3C6;
+  --color-primary-dark: #E0607E;
+  --color-primary-bg: #FFF0F3;
+
+  /* Secondary - Soft Lavender */
+  --color-secondary: #B8A9E8;
+  --color-secondary-light: #D4C9F0;
+  --color-secondary-dark: #8B78C6;
+  --color-secondary-bg: #F3F0FF;
+
+  /* Accent - Soft Mint */
+  --color-accent: #7ED4BC;
+  --color-accent-light: #B2E8D8;
+  --color-accent-dark: #4DB89E;
+  --color-accent-bg: #EEFBF6;
+
+  /* Warm - Soft Peach */
+  --color-warm: #FFB07A;
+  --color-warm-light: #FFD1AA;
+  --color-warm-dark: #E0905A;
+  --color-warm-bg: #FFF5ED;
+
+  /* Semantic colors */
+  --color-income: #7ED4BC;
+  --color-expense: #FF85A2;
+  --color-balance: #B8A9E8;
+  --color-savings: #FFB07A;
+
+  /* Person colors */
+  --color-hyojin: #FF85A2;
+  --color-hoyoung: #7EB8E4;
+  --color-jungwoo: #FFB07A;
+  --color-common: #7ED4BC;
+
+  /* Neutral / Gray */
+  --color-muted: #F5F0F2;
+  --color-muted-foreground: #9B8E94;
+  --color-border: #F0E4E8;
+  --color-border-hover: #E8D4DA;
+  --color-ring: #FFB3C6;
+
+  /* Status */
+  --color-success: #7ED4BC;
+  --color-warning: #FFD07A;
+  --color-error: #FF7A8A;
+  --color-info: #7EB8E4;
+
+  /* Shadows */
+  --shadow-soft: 0 2px 12px rgba(255, 133, 162, 0.08);
+  --shadow-card: 0 4px 20px rgba(61, 48, 66, 0.06);
+  --shadow-card-hover: 0 8px 30px rgba(61, 48, 66, 0.1);
+  --shadow-float: 0 12px 40px rgba(61, 48, 66, 0.12);
+
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Fonts */
+  --font-sans: var(--font-pretendard), "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Pretendard font loaded via @import at top */
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Cute scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary-light);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+/* Selection */
+::selection {
+  background: var(--color-primary-light);
+  color: var(--color-foreground);
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Number input spin button hide */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* react-day-picker cute pastel theme */
+.rdp-cute {
+  --rdp-accent-color: var(--color-secondary);
+  --rdp-accent-background-color: var(--color-secondary-bg);
+}
+
+.rdp-cute .rdp-month_caption {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-foreground);
+  padding: 0.5rem 0;
+}
+
+.rdp-cute .rdp-day {
+  border-radius: var(--radius-lg);
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+}
+
+.rdp-cute .rdp-day:hover {
+  background: var(--color-secondary-bg);
+}
+
+.rdp-cute .rdp-selected .rdp-day,
+.rdp-cute .rdp-day.rdp-selected {
+  background: var(--color-secondary) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.rdp-cute .rdp-today:not(.rdp-selected) .rdp-day,
+.rdp-cute .rdp-day.rdp-today:not(.rdp-selected) {
+  border: 2px solid var(--color-primary-light);
+  font-weight: 600;
+  color: var(--color-primary-dark);
+}
+
+.rdp-cute .rdp-chevron {
+  fill: var(--color-secondary);
+}
+
+.rdp-cute .rdp-weekday {
+  color: var(--color-muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Event dot indicator on calendar days */
+.rdp-day_has-event {
+  position: relative;
+}
+
+.rdp-day_has-event::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+/* ===== Mobile Optimizations ===== */
+
+/* Safe area for iPhone notch/home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Prevent text size adjustment on orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 1023px) {
+  /* Larger touch targets on mobile */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent double-tap zoom on interactive elements */
+  button, a, input, select, textarea {
+    touch-action: manipulation;
+  }
+
+  /* Smoother scrolling on mobile */
+  .overflow-auto, .overflow-y-auto, .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Prevent pull-to-refresh on PWA */
+html, body {
+  overscroll-behavior-y: contain;
+}
+
+/* Disable text selection on interactive elements for cleaner touch UX */
+nav, .mobile-nav {
+  -webkit-user-select: none;
+  user-select: none;
+}

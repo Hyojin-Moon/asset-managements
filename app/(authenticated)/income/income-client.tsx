@@ -1,0 +1,183 @@
+'use client'
+
+import { useState } from 'react'
+import { Header } from '@/components/layout/header'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { BudgetFormModal } from '@/components/budget/budget-form-modal'
+import { DeleteConfirmModal } from '@/components/budget/delete-confirm-modal'
+import { formatKRW } from '@/lib/utils/format'
+import { PERSON_EMOJI } from '@/lib/utils/constants'
+import { Plus, Pencil, Trash2, TrendingUp } from 'lucide-react'
+import type { BudgetItem, PersonType } from '@/types'
+
+const TABS: (PersonType | '전체')[] = ['전체', '공통', '효진', '호영']
+
+export function IncomeClient({ items }: { items: BudgetItem[] }) {
+  const [activeTab, setActiveTab] = useState<PersonType | '전체'>('전체')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editItem, setEditItem] = useState<BudgetItem | null>(null)
+  const [deleteItem, setDeleteItem] = useState<{ id: string; name: string } | null>(null)
+
+  const filtered = activeTab === '전체'
+    ? items
+    : items.filter((i) => i.person_type === activeTab)
+
+  const total = filtered.reduce((sum, i) => sum + i.amount, 0)
+
+  return (
+    <div>
+      <Header
+        title="수입 관리"
+        description="고정 수입 항목을 관리합니다"
+        action={
+          <Button onClick={() => { setEditItem(null); setFormOpen(true) }}>
+            <Plus className="h-4 w-4" /> 추가
+          </Button>
+        }
+      />
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 overflow-x-auto">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap border-2 ${
+              activeTab === tab
+                ? 'bg-primary-bg border-primary-light text-primary-dark'
+                : 'bg-surface border-border text-muted-foreground hover:border-border-hover'
+            }`}
+          >
+            {tab !== '전체' && PERSON_EMOJI[tab]} {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {filtered.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={<TrendingUp className="h-12 w-12" />}
+            title="수입 항목이 없어요"
+            description="첫 수입 항목을 등록해보세요"
+            action={
+              <Button size="sm" onClick={() => { setEditItem(null); setFormOpen(true) }}>
+                <Plus className="h-4 w-4" /> 추가하기
+              </Button>
+            }
+          />
+        </Card>
+      ) : (
+        <Card>
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-border text-muted-foreground">
+                  <th className="text-left py-3 px-3 font-medium">인물</th>
+                  <th className="text-left py-3 px-3 font-medium">항목명</th>
+                  <th className="text-right py-3 px-3 font-medium">금액</th>
+                  <th className="text-left py-3 px-3 font-medium">시작월</th>
+                  <th className="text-left py-3 px-3 font-medium">종료월</th>
+                  <th className="text-right py-3 px-3 font-medium">관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((item) => (
+                  <tr key={item.id} className="border-b border-border/50 hover:bg-surface-hover transition-colors">
+                    <td className="py-3 px-3">
+                      <Badge variant="person">
+                        {PERSON_EMOJI[item.person_type]} {item.person_type}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-3 font-medium">{item.name}</td>
+                    <td className="py-3 px-3 text-right font-semibold text-accent-dark">
+                      {formatKRW(item.amount)}
+                    </td>
+                    <td className="py-3 px-3 text-muted-foreground">{item.effective_from.slice(0, 7)}</td>
+                    <td className="py-3 px-3 text-muted-foreground">{item.effective_until?.slice(0, 7) || '-'}</td>
+                    <td className="py-3 px-3 text-right">
+                      <div className="flex gap-1 justify-end">
+                        <button
+                          onClick={() => { setEditItem(item); setFormOpen(true) }}
+                          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteItem({ id: item.id, name: item.name })}
+                          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-error/10 hover:text-error transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-border">
+                  <td colSpan={2} className="py-3 px-3 font-semibold">합계</td>
+                  <td className="py-3 px-3 text-right font-bold text-accent-dark">{formatKRW(total)}</td>
+                  <td colSpan={3} />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-3">
+            {filtered.map((item) => (
+              <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="person" className="text-[10px]">
+                      {PERSON_EMOJI[item.person_type]} {item.person_type}
+                    </Badge>
+                    <span className="font-medium text-sm truncate">{item.name}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {item.effective_from.slice(0, 7)} ~ {item.effective_until?.slice(0, 7) || '무기한'}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-semibold text-sm text-accent-dark">{formatKRW(item.amount)}</span>
+                  <button
+                    onClick={() => { setEditItem(item); setFormOpen(true) }}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-between items-center pt-3 border-t-2 border-border px-3">
+              <span className="font-semibold text-sm">합계</span>
+              <span className="font-bold text-accent-dark">{formatKRW(total)}</span>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Modals */}
+      <BudgetFormModal
+        open={formOpen}
+        onClose={() => { setFormOpen(false); setEditItem(null) }}
+        type="income"
+        editItem={editItem}
+      />
+
+      {deleteItem && (
+        <DeleteConfirmModal
+          open={!!deleteItem}
+          onClose={() => setDeleteItem(null)}
+          itemId={deleteItem.id}
+          itemName={deleteItem.name}
+        />
+      )}
+    </div>
+  )
+}
