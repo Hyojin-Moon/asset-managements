@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { MonthInput } from '@/components/ui/month-input'
 import { createBudgetItem, updateBudgetItem } from '@/lib/actions/budget'
 import { PERSON_TYPES } from '@/lib/utils/constants'
 import { toast } from 'sonner'
@@ -161,20 +162,20 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
         />
 
         <div className="grid grid-cols-2 gap-3">
-          <Input
+          <MonthInput
             id="effective_from"
             label="시작월"
-            type="month"
             value={form.effective_from}
-            onChange={(e) => setForm({ ...form, effective_from: e.target.value })}
+            onChange={(v) => setForm({ ...form, effective_from: v })}
             required
           />
-          <Input
+          <MonthInput
             id="effective_until"
             label="종료월 (선택)"
-            type="month"
             value={form.effective_until}
-            onChange={(e) => setForm({ ...form, effective_until: e.target.value })}
+            onChange={(v) => setForm({ ...form, effective_until: v })}
+            placeholder="무기한"
+            clearable
           />
         </div>
 
