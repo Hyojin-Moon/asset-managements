@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { PERSON_TYPES, PERSON_BG_CLASSES } from '@/lib/utils/constants'
 import { createCategory, updateCategory, deleteCategory } from '@/lib/actions/categories'
 import {
-  createMappingRule, deleteMappingRule,
+  createMappingRule, updateMappingRule, deleteMappingRule,
   exportTransactionsCSV, exportBudgetCSV, exportEventsCSV,
 } from '@/lib/actions/settings'
 import { logout } from '@/lib/actions/auth'
@@ -255,7 +255,13 @@ function MappingRulesSection({
   categories: ExpenseCategory[]
 }) {
   const [showModal, setShowModal] = useState(false)
+  const [editingRule, setEditingRule] = useState<CategoryMappingRule | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  function handleEdit(rule: CategoryMappingRule) {
+    setEditingRule(rule)
+    setShowModal(true)
+  }
 
   function handleDelete(rule: CategoryMappingRule) {
     if (!confirm(`'${rule.keyword}' 규칙을 삭제하시겠습니까?`)) return
@@ -276,7 +282,7 @@ function MappingRulesSection({
           <Wand2 className="h-4 w-4 text-accent" />
           자동분류 규칙
         </CardTitle>
-        <Button size="sm" onClick={() => setShowModal(true)}>
+        <Button size="sm" onClick={() => { setEditingRule(null); setShowModal(true) }}>
           <Plus className="h-4 w-4" />
           추가
         </Button>
@@ -305,6 +311,12 @@ function MappingRulesSection({
                 <Badge className="bg-accent-bg text-accent-dark">{rule.category_name || '미지정'}</Badge>
                 <div className="ml-auto flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
+                    onClick={() => handleEdit(rule)}
+                    className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
                     onClick={() => handleDelete(rule)}
                     disabled={isPending}
                     className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-error/10 hover:text-error transition-colors"
@@ -320,8 +332,9 @@ function MappingRulesSection({
 
       <MappingRuleModal
         open={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => { setShowModal(false); setEditingRule(null) }}
         categories={categories}
+        editingRule={editingRule}
       />
     </Card>
   )
@@ -331,14 +344,23 @@ function MappingRuleModal({
   open,
   onClose,
   categories,
+  editingRule,
 }: {
   open: boolean
   onClose: () => void
   categories: ExpenseCategory[]
+  editingRule: CategoryMappingRule | null
 }) {
   const [keyword, setKeyword] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [isPending, startTransition] = useTransition()
+  const isEdit = !!editingRule
+
+  // Reset form when modal opens with edit data
+  if (open && isEdit && keyword === '' && categoryId === '') {
+    setKeyword(editingRule!.keyword)
+    setCategoryId(editingRule!.category_id)
+  }
 
   function handleClose() {
     setKeyword('')
@@ -351,13 +373,21 @@ function MappingRuleModal({
     if (!keyword.trim() || !categoryId) return
 
     startTransition(async () => {
-      const result = await createMappingRule({
-        keyword: keyword.trim(),
-        category_id: categoryId,
-      })
+      let result
+      if (isEdit) {
+        result = await updateMappingRule(editingRule!.id, {
+          keyword: keyword.trim(),
+          category_id: categoryId,
+        })
+      } else {
+        result = await createMappingRule({
+          keyword: keyword.trim(),
+          category_id: categoryId,
+        })
+      }
 
       if (result.success) {
-        toast.success('규칙이 추가되었습니다.')
+        toast.success(isEdit ? '규칙이 수정되었습니다.' : '규칙이 추가되었습니다.')
         handleClose()
       } else {
         toast.error(result.error || '처리 실패')
@@ -366,7 +396,7 @@ function MappingRuleModal({
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="자동분류 규칙 추가">
+    <Modal open={open} onClose={handleClose} title={isEdit ? '자동분류 규칙 수정' : '자동분류 규칙 추가'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="키워드"
@@ -386,7 +416,7 @@ function MappingRuleModal({
           <Button type="button" variant="outline" onClick={handleClose}>취소</Button>
           <Button type="submit" disabled={isPending || !categoryId}>
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            추가
+            {isEdit ? '수정' : '추가'}
           </Button>
         </div>
       </form>
