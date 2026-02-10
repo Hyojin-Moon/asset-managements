@@ -4,8 +4,9 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import {
   Settings, Tag, Wand2, Download, User, LogOut,
-  Plus, Pencil, Trash2, Loader2
+  Plus, Pencil, Trash2, Loader2, Target
 } from 'lucide-react'
+import { formatKRW } from '@/lib/utils/format'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -103,6 +104,12 @@ function CategorySection({ categories }: { categories: ExpenseCategory[] }) {
               >
                 <span className="text-xs text-muted-foreground w-5 text-right">{idx + 1}</span>
                 <span className="flex-1 text-sm font-medium">{cat.name}</span>
+                {cat.budget_limit > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-warm-dark bg-warm-bg px-2 py-0.5 rounded-lg">
+                    <Target className="h-3 w-3" />
+                    {formatKRW(cat.budget_limit)}
+                  </span>
+                )}
                 <Badge className={PERSON_BG_CLASSES[cat.person_type as PersonType] || ''}>
                   {cat.person_type}
                 </Badge>
@@ -147,18 +154,21 @@ function CategoryModal({
 }) {
   const [name, setName] = useState('')
   const [personType, setPersonType] = useState<PersonType>('공통')
+  const [budgetLimit, setBudgetLimit] = useState('')
   const [isPending, startTransition] = useTransition()
 
   // Reset form when modal opens
   const isEdit = !!editingCategory
-  if (open && isEdit && name === '' && personType === '공통') {
+  if (open && isEdit && name === '' && personType === '공통' && budgetLimit === '') {
     setName(editingCategory!.name)
     setPersonType(editingCategory!.person_type as PersonType)
+    setBudgetLimit(editingCategory!.budget_limit > 0 ? editingCategory!.budget_limit.toLocaleString() : '')
   }
 
   function handleClose() {
     setName('')
     setPersonType('공통')
+    setBudgetLimit('')
     onClose()
   }
 
@@ -166,12 +176,22 @@ function CategoryModal({
     e.preventDefault()
     if (!name.trim()) return
 
+    const limitNum = parseInt(budgetLimit.replace(/,/g, ''), 10) || 0
+
     startTransition(async () => {
       let result
       if (isEdit) {
-        result = await updateCategory(editingCategory!.id, { name: name.trim(), person_type: personType })
+        result = await updateCategory(editingCategory!.id, {
+          name: name.trim(),
+          person_type: personType,
+          budget_limit: limitNum,
+        })
       } else {
-        result = await createCategory({ name: name.trim(), person_type: personType })
+        result = await createCategory({
+          name: name.trim(),
+          person_type: personType,
+          budget_limit: limitNum,
+        })
       }
 
       if (result.success) {
@@ -199,6 +219,21 @@ function CategoryModal({
           onChange={(e) => setPersonType(e.target.value as PersonType)}
           options={PERSON_TYPES.map((p) => ({ value: p, label: p }))}
         />
+        <Input
+          label="월 한도 (선택)"
+          value={budgetLimit}
+          onChange={(e) => {
+            const raw = e.target.value.replace(/[^0-9]/g, '')
+            setBudgetLimit(raw ? Number(raw).toLocaleString() : '')
+          }}
+          placeholder="0 = 한도 없음"
+          inputMode="numeric"
+        />
+        {budgetLimit && parseInt(budgetLimit.replace(/,/g, ''), 10) > 0 && (
+          <p className="text-xs text-muted-foreground -mt-2">
+            월 {formatKRW(parseInt(budgetLimit.replace(/,/g, ''), 10))} 한도 설정. 리포트에서 초과 여부를 표시합니다.
+          </p>
+        )}
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>취소</Button>
           <Button type="submit" disabled={isPending}>

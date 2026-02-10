@@ -30,6 +30,7 @@ export async function getCategories(personType?: PersonType) {
 export async function createCategory(data: {
   name: string
   person_type: PersonType
+  budget_limit?: number
 }): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -47,6 +48,7 @@ export async function createCategory(data: {
     family_id: profile.family_id,
     name: data.name,
     person_type: data.person_type,
+    budget_limit: data.budget_limit ?? 0,
   })
 
   if (error) return { success: false, error: error.message }
@@ -58,19 +60,25 @@ export async function createCategory(data: {
 
 export async function updateCategory(
   id: string,
-  data: { name?: string; person_type?: PersonType }
+  data: { name?: string; person_type?: PersonType; budget_limit?: number }
 ): Promise<ActionResult> {
   const supabase = await createClient()
 
+  const updateData: Record<string, unknown> = {}
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.person_type !== undefined) updateData.person_type = data.person_type
+  if (data.budget_limit !== undefined) updateData.budget_limit = data.budget_limit
+
   const { error } = await supabase
     .from('expense_categories')
-    .update(data)
+    .update(updateData)
     .eq('id', id)
 
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/settings')
   revalidatePath('/expenses')
+  revalidatePath('/reports/monthly')
   return { success: true }
 }
 

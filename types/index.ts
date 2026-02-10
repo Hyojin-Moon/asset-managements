@@ -54,6 +54,7 @@ export interface ExpenseCategory {
   family_id: string
   name: string
   person_type: PersonType
+  budget_limit: number
   sort_order: number
   is_active: boolean
   created_at: string
@@ -177,6 +178,22 @@ export interface DashboardData {
 }
 
 // ===== Report Data Types =====
+export interface CategoryBudgetStatus {
+  category_id: string
+  category_name: string
+  budget_limit: number
+  actual: number
+  remaining: number
+  usage_percent: number
+}
+
+export interface MonthlySavingsData {
+  accounts: SavingsAccount[]
+  monthlyDeposits: number
+  totalBalance: number
+  totalTarget: number
+}
+
 export interface MonthlyReportData {
   month: string
   totalIncome: number
@@ -189,6 +206,8 @@ export interface MonthlyReportData {
   byCategory: Record<string, number>
   budgetVsActual: BudgetVsActual[]
   dailyExpenses: { date: string; amount: number }[]
+  categoryBudgetStatus: CategoryBudgetStatus[]
+  savings: MonthlySavingsData
 }
 
 export interface QuarterlyReportData {

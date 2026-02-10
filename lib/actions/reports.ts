@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getMonthlyTotals } from './transactions'
 import { getBudgetItems } from './budget'
-import type { MonthlyReportData, QuarterlyReportData, YearlyReportData } from '@/types'
+import type { MonthlyReportData, QuarterlyReportData, YearlyReportData, CategoryBudgetStatus, MonthlySavingsData } from '@/types'
 
 export async function getMonthlyReport(month: string): Promise<MonthlyReportData> {
   const supabase = await createClient()
@@ -13,14 +13,32 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
   const prevDate = new Date(y, m - 2, 1)
   const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
 
-  // Fetch current & previous month totals + budget items in parallel
-  const [current, prev, expenseBudgets, incomeBudgets, prevIncomeBudgets, prevExpenseBudgets] = await Promise.all([
+  const start = `${month}-01`
+  const endDate = new Date(y, m, 0)
+  const end = `${y}-${String(m).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
+
+  // Fetch all data in parallel
+  const [current, prev, expenseBudgets, incomeBudgets, prevIncomeBudgets, prevExpenseBudgets, categoriesRes, savingsAccountsRes, savingsTxRes] = await Promise.all([
     getMonthlyTotals(month),
     getMonthlyTotals(prevMonth),
     getBudgetItems({ type: 'expense', month }),
     getBudgetItems({ type: 'income', month }),
     getBudgetItems({ type: 'income', month: prevMonth }),
     getBudgetItems({ type: 'expense', month: prevMonth }),
+    supabase
+      .from('expense_categories')
+      .select('id, name, budget_limit')
+      .eq('is_active', true)
+      .gt('budget_limit', 0),
+    supabase
+      .from('savings_accounts')
+      .select('*')
+      .eq('is_active', true),
+    supabase
+      .from('savings_transactions')
+      .select('amount')
+      .gte('transaction_date', start)
+      .lte('transaction_date', end),
   ])
 
   // budget_items 합산 (transactions가 없을 때 예산 기준 표시)
@@ -36,10 +54,6 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
   const prevTotalExpense = prev.totalExpense || prevBudgetExpense
 
   // Budget vs Actual: get actual spending per category
-  const start = `${month}-01`
-  const endDate = new Date(y, m, 0)
-  const end = `${y}-${String(m).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
-
   const { data: txData } = await supabase
     .from('transactions')
     .select('category_id, amount, expense_categories(name)')
@@ -70,6 +84,31 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
       difference: item.amount - actual,
     }
   })
+
+  // Category budget status (한도 대비 실사용)
+  const categories = categoriesRes.data ?? []
+  const categoryBudgetStatus: CategoryBudgetStatus[] = categories.map((cat) => {
+    const actual = actualByCategory[cat.id]?.amount ?? 0
+    const limit = cat.budget_limit
+    return {
+      category_id: cat.id,
+      category_name: cat.name,
+      budget_limit: limit,
+      actual,
+      remaining: limit - actual,
+      usage_percent: limit > 0 ? (actual / limit) * 100 : 0,
+    }
+  })
+
+  // Savings data
+  const savingsAccounts = savingsAccountsRes.data ?? []
+  const monthlyDeposits = (savingsTxRes.data ?? []).reduce((s, t) => s + t.amount, 0)
+  const savings: MonthlySavingsData = {
+    accounts: savingsAccounts,
+    monthlyDeposits,
+    totalBalance: savingsAccounts.reduce((s, a) => s + a.current_balance, 0),
+    totalTarget: savingsAccounts.reduce((s, a) => s + a.target_amount, 0),
+  }
 
   // Daily expenses
   const { data: dailyData } = await supabase
@@ -105,6 +144,8 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
     byCategory: current.byCategory,
     budgetVsActual,
     dailyExpenses,
+    categoryBudgetStatus,
+    savings,
   }
 }
 
