@@ -26,6 +26,7 @@ export interface BudgetItem {
   memo?: string | null
   sort_order: number
   is_active: boolean
+  auto_generate: boolean
   created_at: string
   updated_at: string
 }
@@ -43,6 +44,7 @@ export interface Transaction {
   is_emergency: boolean
   card_provider?: CardProvider | null
   card_statement_row_id?: string | null
+  budget_item_id?: string | null
   memo?: string | null
   created_by?: string | null
   created_at: string
@@ -204,7 +206,7 @@ export interface MonthlyReportData {
   prevBalance: number
   byPerson: Record<string, { income: number; expense: number }>
   byCategory: Record<string, number>
-  budgetVsActual: BudgetVsActual[]
+  plannedExpense: number
   dailyExpenses: { date: string; amount: number }[]
   categoryBudgetStatus: CategoryBudgetStatus[]
   savings: MonthlySavingsData
@@ -252,6 +254,7 @@ export interface CreateBudgetItemInput {
   effective_from: string
   effective_until?: string
   memo?: string
+  auto_generate?: boolean
 }
 
 export interface CreateTransactionInput {

@@ -4,7 +4,6 @@ import { useState, useTransition } from 'react'
 import { MonthPicker } from '@/components/ui/month-picker'
 import { Header } from '@/components/layout/header'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { AppBarChart } from '@/components/charts/bar-chart'
 import { AppPieChart } from '@/components/charts/pie-chart'
 import { AppLineChart } from '@/components/charts/line-chart'
 import { formatKRW, formatPercent } from '@/lib/utils/format'
@@ -46,14 +45,11 @@ export function MonthlyReportClient({ initialData }: Props) {
     ? (data.balance - data.prevBalance) / Math.abs(data.prevBalance)
     : 0
 
-  // Budget vs Actual chart data
-  const budgetChartData = data.budgetVsActual
-    .filter(item => item.budget > 0 || item.actual > 0)
-    .map(item => ({
-      name: item.category_name,
-      예산: item.budget,
-      실제: item.actual,
-    }))
+  // Plan vs Actual
+  const planned = data.plannedExpense
+  const actual = data.totalExpense
+  const planDiff = planned - actual
+  const planUsagePercent = planned > 0 ? (actual / planned) * 100 : 0
 
   // Category pie data
   const categoryPieData = Object.entries(data.byCategory)
@@ -260,46 +256,41 @@ export function MonthlyReportClient({ initialData }: Props) {
             </Card>
           )}
 
-          {/* Budget vs Actual */}
-          {budgetChartData.length > 0 && (
+          {/* Plan vs Actual */}
+          {planned > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>예산 vs 실제</CardTitle>
+                <CardTitle>계획 vs 실제 지출</CardTitle>
               </CardHeader>
-              <CardContent>
-                <AppBarChart
-                  data={budgetChartData}
-                  bars={[
-                    { dataKey: '예산', name: '예산', color: '#B8A9E8' },
-                    { dataKey: '실제', name: '실제', color: '#FF85A2' },
-                  ]}
-                  height={Math.max(200, budgetChartData.length * 50)}
-                  layout="horizontal"
-                />
-                {/* Table */}
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2 font-medium text-muted-foreground">카테고리</th>
-                        <th className="text-right py-2 font-medium text-muted-foreground">예산</th>
-                        <th className="text-right py-2 font-medium text-muted-foreground">실제</th>
-                        <th className="text-right py-2 font-medium text-muted-foreground">차이</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.budgetVsActual.filter(i => i.budget > 0 || i.actual > 0).map((item, idx) => (
-                        <tr key={`${item.category_id}-${idx}`} className="border-b border-border/50">
-                          <td className="py-2">{item.category_name}</td>
-                          <td className="py-2 text-right">{formatKRW(item.budget)}</td>
-                          <td className="py-2 text-right">{formatKRW(item.actual)}</td>
-                          <td className={`py-2 text-right font-medium ${item.difference >= 0 ? 'text-accent-dark' : 'text-primary-dark'}`}>
-                            {item.difference >= 0 ? '+' : ''}{formatKRW(item.difference)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl bg-secondary-bg/50 p-4 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">계획 (고정지출 합산)</p>
+                    <p className="text-lg sm:text-2xl font-bold text-secondary-dark">{formatKRW(planned)}</p>
+                  </div>
+                  <div className="rounded-xl bg-primary-bg/50 p-4 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">실제 지출</p>
+                    <p className="text-lg sm:text-2xl font-bold text-primary-dark">{formatKRW(actual)}</p>
+                  </div>
+                </div>
+                {/* Gauge bar */}
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        planUsagePercent > 100 ? 'bg-error' : planUsagePercent >= 90 ? 'bg-warning' : 'bg-accent'
+                      }`}
+                      style={{ width: `${Math.min(planUsagePercent, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      계획 대비 {planUsagePercent.toFixed(0)}% 사용
+                    </span>
+                    <span className={`font-semibold ${planDiff >= 0 ? 'text-accent-dark' : 'text-error'}`}>
+                      {planDiff >= 0 ? `${formatKRW(planDiff)} 여유` : `${formatKRW(Math.abs(planDiff))} 초과`}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>

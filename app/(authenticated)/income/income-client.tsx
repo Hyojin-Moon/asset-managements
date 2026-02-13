@@ -1,6 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { Header } from '@/components/layout/header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,24 +11,63 @@ import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { BudgetFormModal } from '@/components/budget/budget-form-modal'
 import { DeleteConfirmModal } from '@/components/budget/delete-confirm-modal'
+import { SortableTableRow, SortableMobileCard } from '@/components/budget/sortable-budget-row'
 import { formatKRW } from '@/lib/utils/format'
 import { PERSON_EMOJI } from '@/lib/utils/constants'
+import { updateBudgetItemOrder } from '@/lib/actions/budget'
 import { Plus, Pencil, Trash2, TrendingUp } from 'lucide-react'
+import { toast } from 'sonner'
 import type { BudgetItem, PersonType } from '@/types'
 
 const TABS: (PersonType | '전체')[] = ['전체', '공통', '효진', '호영']
 
-export function IncomeClient({ items }: { items: BudgetItem[] }) {
+export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
+  const [items, setItems] = useState(initialItems)
   const [activeTab, setActiveTab] = useState<PersonType | '전체'>('전체')
   const [formOpen, setFormOpen] = useState(false)
   const [editItem, setEditItem] = useState<BudgetItem | null>(null)
   const [deleteItem, setDeleteItem] = useState<{ id: string; name: string } | null>(null)
+
+  // items가 서버에서 새로 넘어오면 동기화
+  if (initialItems !== items && initialItems.length !== items.length) {
+    setItems(initialItems)
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   const filtered = activeTab === '전체'
     ? items
     : items.filter((i) => i.person_type === activeTab)
 
   const total = filtered.reduce((sum, i) => sum + i.amount, 0)
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = filtered.findIndex((i) => i.id === active.id)
+    const newIndex = filtered.findIndex((i) => i.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = arrayMove(filtered, oldIndex, newIndex)
+
+    // 낙관적 업데이트: 전체 items 배열에서도 순서 반영
+    const orderMap = new Map(reordered.map((item, idx) => [item.id, idx]))
+    setItems((prev) =>
+      prev.map((item) => orderMap.has(item.id) ? { ...item, sort_order: orderMap.get(item.id)! } : item)
+        .sort((a, b) => a.sort_order - b.sort_order)
+    )
+
+    const updates = reordered.map((item, idx) => ({ id: item.id, sort_order: idx }))
+    const result = await updateBudgetItemOrder(updates)
+    if (!result.success) {
+      toast.error('순서 저장에 실패했습니다')
+      setItems(initialItems)
+    }
+  }
 
   return (
     <div>
@@ -72,93 +114,105 @@ export function IncomeClient({ items }: { items: BudgetItem[] }) {
         </Card>
       ) : (
         <Card>
-          {/* Desktop table */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-border text-muted-foreground">
-                  <th className="text-left py-3 px-3 font-medium">인물</th>
-                  <th className="text-left py-3 px-3 font-medium">항목명</th>
-                  <th className="text-right py-3 px-3 font-medium">금액</th>
-                  <th className="text-left py-3 px-3 font-medium">시작월</th>
-                  <th className="text-left py-3 px-3 font-medium">종료월</th>
-                  <th className="text-right py-3 px-3 font-medium">관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item) => (
-                  <tr key={item.id} className="border-b border-border/50 hover:bg-surface-hover transition-colors">
-                    <td className="py-3 px-3">
-                      <Badge variant="person">
-                        {PERSON_EMOJI[item.person_type]} {item.person_type}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-3 font-medium">{item.name}</td>
-                    <td className="py-3 px-3 text-right font-semibold text-accent-dark">
-                      {formatKRW(item.amount)}
-                    </td>
-                    <td className="py-3 px-3 text-muted-foreground">{item.effective_from.slice(0, 7)}</td>
-                    <td className="py-3 px-3 text-muted-foreground">{item.effective_until?.slice(0, 7) || '-'}</td>
-                    <td className="py-3 px-3 text-right">
-                      <div className="flex gap-1 justify-end">
-                        <button
-                          onClick={() => { setEditItem(item); setFormOpen(true) }}
-                          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteItem({ id: item.id, name: item.name })}
-                          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-error/10 hover:text-error transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-border">
-                  <td colSpan={2} className="py-3 px-3 font-semibold">합계</td>
-                  <td className="py-3 px-3 text-right font-bold text-accent-dark">{formatKRW(total)}</td>
-                  <td colSpan={3} />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <DndContext
+            id="income-dnd"
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+          >
+            <SortableContext items={filtered.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-border text-muted-foreground">
+                      <th className="w-8" />
+                      <th className="text-left py-3 px-3 font-medium">인물</th>
+                      <th className="text-left py-3 px-3 font-medium">항목명</th>
+                      <th className="text-right py-3 px-3 font-medium">금액</th>
+                      <th className="text-left py-3 px-3 font-medium">시작월</th>
+                      <th className="text-left py-3 px-3 font-medium">종료월</th>
+                      <th className="text-right py-3 px-3 font-medium">관리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((item) => (
+                      <SortableTableRow key={item.id} id={item.id}>
+                        <td className="py-3 px-3">
+                          <Badge variant="person">
+                            {PERSON_EMOJI[item.person_type]} {item.person_type}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-3 font-medium">{item.name}</td>
+                        <td className="py-3 px-3 text-right font-semibold text-accent-dark">
+                          {formatKRW(item.amount)}
+                        </td>
+                        <td className="py-3 px-3 text-muted-foreground">{item.effective_from.slice(0, 7)}</td>
+                        <td className="py-3 px-3 text-muted-foreground">{item.effective_until?.slice(0, 7) || '-'}</td>
+                        <td className="py-3 px-3 text-right">
+                          <div className="flex gap-1 justify-end">
+                            <button
+                              onClick={() => { setEditItem(item); setFormOpen(true) }}
+                              className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteItem({ id: item.id, name: item.name })}
+                              className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-error/10 hover:text-error transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </SortableTableRow>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-border">
+                      <td />
+                      <td colSpan={2} className="py-3 px-3 font-semibold">합계</td>
+                      <td className="py-3 px-3 text-right font-bold text-accent-dark">{formatKRW(total)}</td>
+                      <td colSpan={3} />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
 
-          {/* Mobile cards */}
-          <div className="sm:hidden space-y-3">
-            {filtered.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="person" className="text-[10px]">
-                      {PERSON_EMOJI[item.person_type]} {item.person_type}
-                    </Badge>
-                    <span className="font-medium text-sm truncate">{item.name}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {item.effective_from.slice(0, 7)} ~ {item.effective_until?.slice(0, 7) || '무기한'}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="font-semibold text-sm text-accent-dark">{formatKRW(item.amount)}</span>
-                  <button
-                    onClick={() => { setEditItem(item); setFormOpen(true) }}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
+              {/* Mobile cards */}
+              <div className="sm:hidden space-y-3">
+                {filtered.map((item) => (
+                  <SortableMobileCard key={item.id} id={item.id} className="flex items-center gap-2 p-3 rounded-xl bg-muted/50">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="person" className="text-[10px]">
+                          {PERSON_EMOJI[item.person_type]} {item.person_type}
+                        </Badge>
+                        <span className="font-medium text-sm truncate">{item.name}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {item.effective_from.slice(0, 7)} ~ {item.effective_until?.slice(0, 7) || '무기한'}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-semibold text-sm text-accent-dark">{formatKRW(item.amount)}</span>
+                      <button
+                        onClick={() => { setEditItem(item); setFormOpen(true) }}
+                        className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </SortableMobileCard>
+                ))}
+                <div className="flex justify-between items-center pt-3 border-t-2 border-border px-3">
+                  <span className="font-semibold text-sm">합계</span>
+                  <span className="font-bold text-accent-dark">{formatKRW(total)}</span>
                 </div>
               </div>
-            ))}
-            <div className="flex justify-between items-center pt-3 border-t-2 border-border px-3">
-              <span className="font-semibold text-sm">합계</span>
-              <span className="font-bold text-accent-dark">{formatKRW(total)}</span>
-            </div>
-          </div>
+            </SortableContext>
+          </DndContext>
         </Card>
       )}
 

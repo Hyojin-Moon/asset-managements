@@ -53,7 +53,10 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
   const prevTotalIncome = prev.totalIncome || prevBudgetIncome
   const prevTotalExpense = prev.totalExpense || prevBudgetExpense
 
-  // Budget vs Actual: get actual spending per category
+  // 계획 총액: 고정지출(budget_items) 합산
+  const plannedExpense = budgetExpense
+
+  // 카테고리별 한도 현황에 필요한 실제 지출 데이터
   const { data: txData } = await supabase
     .from('transactions')
     .select('category_id, amount, expense_categories(name)')
@@ -61,7 +64,6 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
     .gte('transaction_date', start)
     .lte('transaction_date', end)
 
-  // Aggregate actual spending by category_id
   const actualByCategory: Record<string, { name: string; amount: number }> = {}
   for (const row of txData ?? []) {
     const catId = row.category_id ?? 'uncategorized'
@@ -71,19 +73,6 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
     }
     actualByCategory[catId].amount += row.amount
   }
-
-  // Build budget vs actual
-  const budgetVsActual = expenseBudgets.map((item) => {
-    const catId = item.category_id ?? 'uncategorized'
-    const actual = actualByCategory[catId]?.amount ?? 0
-    return {
-      category_id: catId,
-      category_name: item.category_name ?? item.name,
-      budget: item.amount,
-      actual,
-      difference: item.amount - actual,
-    }
-  })
 
   // Category budget status (한도 대비 실사용)
   const categories = categoriesRes.data ?? []
@@ -142,7 +131,7 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
     prevBalance: prevTotalIncome - prevTotalExpense,
     byPerson: current.byPerson,
     byCategory: current.byCategory,
-    budgetVsActual,
+    plannedExpense,
     dailyExpenses,
     categoryBudgetStatus,
     savings,
