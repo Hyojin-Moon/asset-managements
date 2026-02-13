@@ -8,9 +8,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { uploadCardStatement } from '@/lib/actions/card-upload'
+import { uploadCardStatement, deleteCardImport } from '@/lib/actions/card-upload'
+import { Modal } from '@/components/ui/modal'
 import { PERSON_TYPES, PERSON_EMOJI } from '@/lib/utils/constants'
-import { Upload, FileSpreadsheet, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { Upload, FileSpreadsheet, CheckCircle, Clock, XCircle, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { CardStatementImport, PersonType, CardProvider } from '@/types'
 
@@ -27,6 +28,8 @@ export function CardUploadClient({ history }: { history: CardStatementImport[] }
   const [personType, setPersonType] = useState<PersonType>('공통')
   const [statementMonth, setStatementMonth] = useState(new Date().toISOString().slice(0, 7))
   const [pending, setPending] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<CardStatementImport | null>(null)
+  const [deletePending, setDeletePending] = useState(false)
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -65,6 +68,19 @@ export function CardUploadClient({ history }: { history: CardStatementImport[] }
       toast.error(result.error || '업로드 실패')
     }
     setPending(false)
+  }
+
+  async function handleDeleteImport() {
+    if (!deleteTarget) return
+    setDeletePending(true)
+    const result = await deleteCardImport(deleteTarget.id)
+    if (result.success) {
+      toast.success('삭제되었습니다')
+      setDeleteTarget(null)
+    } else {
+      toast.error(result.error || '삭제 실패')
+    }
+    setDeletePending(false)
   }
 
   const personOptions = PERSON_TYPES.map((p) => ({ value: p, label: `${PERSON_EMOJI[p]} ${p}` }))
@@ -162,12 +178,12 @@ export function CardUploadClient({ history }: { history: CardStatementImport[] }
             ) : (
               <div className="space-y-3">
                 {history.map((item) => (
-                  <button
+                  <div
                     key={item.id}
+                    className="group p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                     onClick={() => {
                       if (item.status === 'reviewing') router.push(`/card-upload/${item.id}`)
                     }}
-                    className="w-full text-left p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium">
@@ -175,18 +191,56 @@ export function CardUploadClient({ history }: { history: CardStatementImport[] }
                       </span>
                       <StatusBadge status={item.status} />
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{PERSON_EMOJI[item.person_type as PersonType]} {item.person_type}</span>
-                      <span>·</span>
-                      <span>{item.total_rows}건</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{PERSON_EMOJI[item.person_type as PersonType]} {item.person_type}</span>
+                        <span>·</span>
+                        <span>{item.total_rows}건</span>
+                      </div>
+                      {item.status === 'reviewing' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeleteTarget(item)
+                          }}
+                          className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirm Modal */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="리뷰 내역 삭제"
+      >
+        {deleteTarget && (
+          <>
+            <p className="text-sm text-muted-foreground mb-6">
+              <strong className="text-foreground">
+                {deleteTarget.statement_month.slice(0, 7)}{' '}
+                {deleteTarget.card_provider === 'samsung' ? '삼성카드' : deleteTarget.card_provider === 'kb' ? '국민카드' : '기타'}
+              </strong>{' '}
+              내역({deleteTarget.total_rows}건)을 삭제할까요?
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)}>취소</Button>
+              <Button variant="destructive" className="flex-1" onClick={handleDeleteImport} disabled={deletePending}>
+                {deletePending ? '삭제 중...' : '삭제'}
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   )
 }

@@ -11,13 +11,13 @@ import { Modal } from '@/components/ui/modal'
 import { EmptyState } from '@/components/ui/empty-state'
 import { MonthPicker } from '@/components/ui/month-picker'
 import { TransactionForm } from '@/components/transactions/transaction-form'
-import { deleteTransaction } from '@/lib/actions/transactions'
+import { deleteTransaction, deleteTransactionsByMonth } from '@/lib/actions/transactions'
 import { formatKRW } from '@/lib/utils/format'
 import { formatDate, addMonths, subMonths } from '@/lib/utils/date'
 import { PERSON_TYPES, PERSON_EMOJI } from '@/lib/utils/constants'
-import { Plus, Receipt, Pencil, Trash2, Search } from 'lucide-react'
+import { Plus, Receipt, Pencil, Trash2, Search, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Transaction, ExpenseCategory, PersonType, TransactionType } from '@/types'
+import type { Transaction, ExpenseCategory } from '@/types'
 
 interface Props {
   transactions: Transaction[]
@@ -33,6 +33,8 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
   const [editItem, setEditItem] = useState<Transaction | null>(null)
   const [deleteId, setDeleteId] = useState<{ id: string; name: string } | null>(null)
   const [deletePending, setDeletePending] = useState(false)
+  const [showBulkDelete, setShowBulkDelete] = useState(false)
+  const [bulkDeletePending, setBulkDeletePending] = useState(false)
 
   const [y, m] = currentMonth.split('-').map(Number)
   const currentDate = new Date(y, m - 1, 1)
@@ -76,6 +78,18 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
     setDeletePending(false)
   }
 
+  async function handleBulkDelete() {
+    setBulkDeletePending(true)
+    const result = await deleteTransactionsByMonth(currentMonth)
+    if (result.success) {
+      toast.success(`${currentMonth} 전체 내역이 삭제되었습니다`)
+      setShowBulkDelete(false)
+    } else {
+      toast.error(result.error || '삭제 실패')
+    }
+    setBulkDeletePending(false)
+  }
+
   const activeType = searchParams.get('type') || ''
   const activePerson = searchParams.get('person') || ''
   const activeCategory = searchParams.get('category') || ''
@@ -85,9 +99,16 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
       <Header
         title="거래 내역"
         action={
-          <Link href="/transactions/new">
-            <Button><Plus className="h-4 w-4" /> 거래 추가</Button>
-          </Link>
+          <div className="flex gap-2">
+            {transactions.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setShowBulkDelete(true)} className="text-error border-error/30 hover:bg-error/10">
+                <Trash2 className="h-4 w-4" /> 내역 전체 삭제
+              </Button>
+            )}
+            <Link href="/transactions/new">
+              <Button><Plus className="h-4 w-4" /> 거래 추가</Button>
+            </Link>
+          </div>
         }
       />
 
@@ -205,10 +226,9 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="text-[10px] text-muted-foreground">{tx.person_type}</span>
                           {tx.category_name && (
-                            <>
-                              <span className="text-[10px] text-muted-foreground">·</span>
-                              <span className="text-[10px] text-muted-foreground">{tx.category_name}</span>
-                            </>
+                            <Badge variant={tx.type === 'income' ? 'income' : 'expense'} className="text-[10px] px-1.5 py-0">
+                              {tx.category_name}
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -308,6 +328,33 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
           <Button variant="outline" className="flex-1" onClick={() => setDeleteId(null)}>취소</Button>
           <Button variant="destructive" className="flex-1" onClick={handleDelete} disabled={deletePending}>
             {deletePending ? '삭제 중...' : '삭제'}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Bulk Delete Confirm */}
+      <Modal
+        open={showBulkDelete}
+        onClose={() => setShowBulkDelete(false)}
+        title="월별 전체 삭제"
+      >
+        <div className="flex items-start gap-3 mb-6">
+          <div className="h-10 w-10 rounded-xl bg-error/10 flex items-center justify-center shrink-0">
+            <AlertTriangle className="h-5 w-5 text-error" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-foreground mb-1">
+              {currentMonth.replace('-', '년 ')}월 전체 내역을 삭제할까요?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              총 <strong className="text-foreground">{totalCount}건</strong>의 거래가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={() => setShowBulkDelete(false)}>취소</Button>
+          <Button variant="destructive" className="flex-1" onClick={handleBulkDelete} disabled={bulkDeletePending}>
+            {bulkDeletePending ? '삭제 중...' : '전체 삭제'}
           </Button>
         </div>
       </Modal>

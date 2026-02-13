@@ -12,6 +12,7 @@ import {
   toggleCardRowExclusion,
   confirmCardImport,
   saveMappingRule,
+  deleteCardImport,
 } from '@/lib/actions/card-upload'
 import { formatKRW } from '@/lib/utils/format'
 import {
@@ -25,6 +26,7 @@ import {
   Check,
   ArrowLeft,
   Sparkles,
+  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { CardStatementImport, CardStatementRow, ExpenseCategory } from '@/types'
@@ -46,6 +48,8 @@ export function CardReviewClient({
   const [confirmPending, setConfirmPending] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [ruleModal, setRuleModal] = useState<{ rowId: string; merchantName: string; categoryId: string } | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletePending, setDeletePending] = useState(false)
 
   const isConfirmed = importData.status === 'confirmed'
 
@@ -139,6 +143,19 @@ export function CardReviewClient({
     setRuleModal(null)
   }
 
+  async function handleDelete() {
+    setDeletePending(true)
+    const result = await deleteCardImport(importData.id)
+    if (result.success) {
+      toast.success('삭제되었습니다')
+      router.push('/card-upload')
+    } else {
+      toast.error(result.error || '삭제 실패')
+    }
+    setDeletePending(false)
+    setShowDeleteModal(false)
+  }
+
   const providerLabel =
     importData.card_provider === 'samsung' ? '삼성카드' : importData.card_provider === 'kb' ? '국민카드' : '기타'
 
@@ -167,13 +184,23 @@ export function CardReviewClient({
               <CheckCircle className="h-3 w-3 mr-1" /> 확정 완료
             </Badge>
           ) : (
-            <Button
-              size="sm"
-              onClick={() => setShowConfirmModal(true)}
-              disabled={stats.active === 0}
-            >
-              <CheckCircle className="h-4 w-4" /> 확정 ({stats.active}건 · {formatKRW(stats.totalAmount)})
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteModal(true)}
+                className="text-error border-error/30 hover:bg-error/10"
+              >
+                <Trash2 className="h-4 w-4" /> 삭제
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShowConfirmModal(true)}
+                disabled={stats.active === 0}
+              >
+                <CheckCircle className="h-4 w-4" /> 확정 ({stats.active}건 · {formatKRW(stats.totalAmount)})
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -314,6 +341,26 @@ export function CardReviewClient({
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* 삭제 확인 모달 */}
+      <Modal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="리뷰 내역 삭제"
+      >
+        <p className="text-sm text-muted-foreground mb-6">
+          <strong className="text-foreground">
+            {importData.statement_month.slice(0, 7)} {providerLabel}
+          </strong>{' '}
+          내역({stats.total}건)을 삭제할까요? 이 작업은 되돌릴 수 없습니다.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={() => setShowDeleteModal(false)}>취소</Button>
+          <Button variant="destructive" className="flex-1" onClick={handleDelete} disabled={deletePending}>
+            {deletePending ? '삭제 중...' : '삭제'}
+          </Button>
+        </div>
       </Modal>
     </div>
   )

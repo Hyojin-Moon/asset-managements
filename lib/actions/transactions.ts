@@ -192,6 +192,27 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
   return { success: true }
 }
 
+export async function deleteTransactionsByMonth(month: string): Promise<ActionResult> {
+  const supabase = await createClient()
+
+  const start = `${month}-01`
+  const [y, m] = month.split('-').map(Number)
+  const endDate = new Date(y, m, 0)
+  const end = `${y}-${String(m).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
+
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .gte('transaction_date', start)
+    .lte('transaction_date', end)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/transactions')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
 export async function getMonthlyTotals(month: string) {
   const supabase = await createClient()
 

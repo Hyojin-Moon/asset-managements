@@ -298,6 +298,36 @@ export async function saveMappingRule(data: {
 }
 
 /**
+ * 리뷰중인 카드 명세서 삭제
+ */
+export async function deleteCardImport(importId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+
+  // reviewing 상태인지 확인
+  const { data: importData } = await supabase
+    .from('card_statement_imports')
+    .select('status')
+    .eq('id', importId)
+    .single()
+
+  if (!importData) return { success: false, error: 'Import를 찾을 수 없습니다.' }
+  if (importData.status !== 'reviewing') {
+    return { success: false, error: '리뷰중인 내역만 삭제할 수 있습니다.' }
+  }
+
+  // card_statement_rows는 ON DELETE CASCADE로 자동 삭제
+  const { error } = await supabase
+    .from('card_statement_imports')
+    .delete()
+    .eq('id', importId)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/card-upload')
+  return { success: true }
+}
+
+/**
  * 업로드 이력 조회
  */
 export async function getCardImportHistory() {
