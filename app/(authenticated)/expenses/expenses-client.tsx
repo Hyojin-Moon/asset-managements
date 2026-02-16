@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
@@ -28,9 +28,7 @@ export function ExpensesClient({ items: initialItems, categories }: { items: Bud
   const [formOpen, setFormOpen] = useState(false)
   const [editItem, setEditItem] = useState<BudgetItem | null>(null)
   const [deleteItem, setDeleteItem] = useState<{ id: string; name: string } | null>(null)
-  const [selected, setSelected] = useState<Set<string>>(() => {
-    return new Set(initialItems.filter((i) => i.auto_generate).map((i) => i.id))
-  })
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [generating, setGenerating] = useState(false)
   const [dupConfirm, setDupConfirm] = useState<{
     duplicateNames: string[]
@@ -40,9 +38,9 @@ export function ExpensesClient({ items: initialItems, categories }: { items: Bud
   const currentMonth = new Date().toISOString().slice(0, 7)
 
   // items가 서버에서 새로 넘어오면 동기화
-  if (initialItems !== items && initialItems.length !== items.length) {
+  useEffect(() => {
     setItems(initialItems)
-  }
+  }, [initialItems])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -114,6 +112,12 @@ export function ExpensesClient({ items: initialItems, categories }: { items: Bud
     const result = await generateBudgetTransactions(currentMonth, ids)
     if (result.success) {
       toast.success(`${result.created}건의 거래가 생성되었습니다`)
+      // 생성 완료된 항목 체크 해제
+      setSelected((prev) => {
+        const next = new Set(prev)
+        ids.forEach((id) => next.delete(id))
+        return next
+      })
     } else {
       toast.error(result.error || '거래 생성에 실패했습니다')
     }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,7 @@ interface BudgetFormModalProps {
 }
 
 export function BudgetFormModal({ open, onClose, type, editItem, categories }: BudgetFormModalProps) {
+  const router = useRouter()
   const isEdit = !!editItem
   const isExpense = type === 'expense'
   const title = isEdit
@@ -36,6 +38,7 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
     effective_from: new Date().toISOString().slice(0, 7),
     effective_until: '',
     memo: '',
+    auto_generate: false,
   })
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
         effective_from: editItem.effective_from.slice(0, 7),
         effective_until: editItem.effective_until?.slice(0, 7) || '',
         memo: editItem.memo || '',
+        auto_generate: editItem.auto_generate ?? false,
       })
     } else {
       setForm({
@@ -60,6 +64,7 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
         effective_from: new Date().toISOString().slice(0, 7),
         effective_until: '',
         memo: '',
+        auto_generate: false,
       })
     }
   }, [editItem, open])
@@ -78,13 +83,14 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
     const payload = {
       type,
       person_type: form.person_type,
-      category_id: form.category_id || undefined,
+      category_id: form.category_id || null,
       name: form.name,
       amount,
       recurrence: form.recurrence as 'monthly' | 'one_time',
       effective_from: form.effective_from,
-      effective_until: form.effective_until || undefined,
-      memo: form.memo || undefined,
+      effective_until: form.effective_until || null,
+      memo: form.memo || null,
+      auto_generate: form.auto_generate,
     }
 
     const result = isEdit
@@ -94,6 +100,7 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
     if (result.success) {
       toast.success(isEdit ? '수정되었습니다' : '추가되었습니다')
       onClose()
+      router.refresh()
     } else {
       toast.error(result.error || '오류가 발생했습니다')
     }
@@ -186,6 +193,23 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
           value={form.memo}
           onChange={(e) => setForm({ ...form, memo: e.target.value })}
         />
+
+        {isExpense && (
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-accent-bg/50 cursor-pointer hover:bg-accent-bg transition-colors">
+            <input
+              type="checkbox"
+              checked={form.auto_generate}
+              onChange={(e) => setForm({ ...form, auto_generate: e.target.checked })}
+              className="h-4 w-4 rounded accent-accent"
+            />
+            <div className="flex-1">
+              <span className="text-sm font-medium">거래내역에 매월 추가하기</span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                체크하면 해당 항목이 매월 거래내역에 자동으로 추가됩니다
+              </p>
+            </div>
+          </label>
+        )}
 
         <div className="flex gap-3 mt-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>

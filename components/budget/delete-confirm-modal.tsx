@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { deleteBudgetItem } from '@/lib/actions/budget'
@@ -14,6 +15,7 @@ interface DeleteConfirmModalProps {
 }
 
 export function DeleteConfirmModal({ open, onClose, itemId, itemName }: DeleteConfirmModalProps) {
+  const router = useRouter()
   const [pending, setPending] = useState(false)
 
   async function handleDelete() {
@@ -22,6 +24,7 @@ export function DeleteConfirmModal({ open, onClose, itemId, itemName }: DeleteCo
     if (result.success) {
       toast.success('삭제되었습니다')
       onClose()
+      router.refresh()
     } else {
       toast.error(result.error || '삭제 중 오류가 발생했습니다')
     }

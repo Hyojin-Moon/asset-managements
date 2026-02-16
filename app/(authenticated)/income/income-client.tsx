@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
@@ -29,9 +29,9 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
   const [deleteItem, setDeleteItem] = useState<{ id: string; name: string } | null>(null)
 
   // items가 서버에서 새로 넘어오면 동기화
-  if (initialItems !== items && initialItems.length !== items.length) {
+  useEffect(() => {
     setItems(initialItems)
-  }
+  }, [initialItems])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
