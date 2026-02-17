@@ -114,16 +114,16 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
         </Card>
       ) : (
         <Card>
-          <DndContext
-            id="income-dnd"
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-            modifiers={[restrictToVerticalAxis]}
-          >
-            <SortableContext items={filtered.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-              {/* Desktop table */}
-              <div className="hidden sm:block overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
+            <DndContext
+              id="income-dnd-desktop"
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              modifiers={[restrictToVerticalAxis]}
+            >
+              <SortableContext items={filtered.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b-2 border-border text-muted-foreground">
@@ -178,10 +178,20 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
                     </tr>
                   </tfoot>
                 </table>
-              </div>
+              </SortableContext>
+            </DndContext>
+          </div>
 
-              {/* Mobile cards */}
-              <div className="sm:hidden space-y-3">
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-3">
+            <DndContext
+              id="income-dnd-mobile"
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              modifiers={[restrictToVerticalAxis]}
+            >
+              <SortableContext items={filtered.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                 {filtered.map((item) => (
                   <SortableMobileCard key={item.id} id={item.id} className="flex items-center gap-2 p-3 rounded-xl bg-muted/50">
                     <div className="flex-1 min-w-0">
@@ -206,13 +216,13 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
                     </div>
                   </SortableMobileCard>
                 ))}
-                <div className="flex justify-between items-center pt-3 border-t-2 border-border px-3">
-                  <span className="font-semibold text-sm">합계</span>
-                  <span className="font-bold text-accent-dark">{formatKRW(total)}</span>
-                </div>
-              </div>
-            </SortableContext>
-          </DndContext>
+              </SortableContext>
+            </DndContext>
+            <div className="flex justify-between items-center pt-3 border-t-2 border-border px-3">
+              <span className="font-semibold text-sm">합계</span>
+              <span className="font-bold text-accent-dark">{formatKRW(total)}</span>
+            </div>
+          </div>
         </Card>
       )}
 
