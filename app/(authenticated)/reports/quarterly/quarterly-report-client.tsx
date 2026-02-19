@@ -75,17 +75,18 @@ export function QuarterlyReportClient({ initialData }: Props) {
     const otherAmt = Object.entries(m.byCategory)
       .filter(([name]) => !topCategories.includes(name))
       .reduce((s, [, v]) => s + v, 0)
-    if (otherAmt > 0) row['기타'] = otherAmt
+    if (otherAmt > 0 && !topCategories.includes('기타')) row['기타'] = otherAmt
     return row
   })
 
+  const hasOtherCategory = Object.keys(allCategories).length > 5 && !topCategories.includes('기타')
   const categoryBars = [
     ...topCategories.map((cat, i) => ({
       dataKey: cat,
       name: cat,
       color: CHART_COLORS[i % CHART_COLORS.length],
     })),
-    ...(Object.keys(allCategories).length > 5 ? [{ dataKey: '기타', name: '기타', color: '#CBD5E1' }] : []),
+    ...(hasOtherCategory ? [{ dataKey: '기타', name: '기타', color: '#CBD5E1' }] : []),
   ]
 
   const hasData = data.totalIncome > 0 || data.totalExpense > 0
