@@ -83,13 +83,13 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
     const payload = {
       type,
       person_type: form.person_type,
-      category_id: form.category_id || null,
+      category_id: form.category_id || undefined,
       name: form.name,
       amount,
       recurrence: form.recurrence as 'monthly' | 'one_time',
       effective_from: form.effective_from,
-      effective_until: form.effective_until || null,
-      memo: form.memo || null,
+      effective_until: form.effective_until || undefined,
+      memo: form.memo || undefined,
       auto_generate: form.auto_generate,
     }
 

@@ -221,10 +221,12 @@ export interface QuarterlyReportData {
     totalExpense: number
     balance: number
     byCategory: Record<string, number>
+    savings: number
   }[]
   totalIncome: number
   totalExpense: number
   balance: number
+  savings: MonthlySavingsData
 }
 
 export interface YearlyReportData {
@@ -234,6 +236,7 @@ export interface YearlyReportData {
     totalIncome: number
     totalExpense: number
     balance: number
+    savings: number
   }[]
   totalIncome: number
   totalExpense: number
@@ -241,6 +244,7 @@ export interface YearlyReportData {
   savingsRate: number
   byCategory: Record<string, number>
   byPerson: Record<string, { income: number; expense: number }>
+  savings: MonthlySavingsData
 }
 
 // ===== Form Input Types =====

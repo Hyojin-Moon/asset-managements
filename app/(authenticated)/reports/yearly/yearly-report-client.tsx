@@ -8,9 +8,9 @@ import { AppBarChart } from '@/components/charts/bar-chart'
 import { AppPieChart } from '@/components/charts/pie-chart'
 import { formatKRW, formatPercent } from '@/lib/utils/format'
 import { getYearlyReport } from '@/lib/actions/reports'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { CHART_COLORS } from '@/lib/utils/constants'
-import type { YearlyReportData } from '@/types'
+import { ChevronLeft, ChevronRight, PiggyBank } from 'lucide-react'
+import { CHART_COLORS, PERSON_EMOJI } from '@/lib/utils/constants'
+import type { YearlyReportData, PersonType } from '@/types'
 
 const PERSON_PIE_COLORS = ['#FF85A2', '#7EB8E4', '#FFB07A', '#7ED4BC']
 
@@ -39,6 +39,7 @@ export function YearlyReportClient({ initialData }: Props) {
       수입: m.totalIncome,
       지출: m.totalExpense,
       잔액: m.balance,
+      저축: m.savings,
     }
   })
 
@@ -119,6 +120,7 @@ export function YearlyReportClient({ initialData }: Props) {
                   { dataKey: '수입', name: '수입', color: '#7ED4BC' },
                   { dataKey: '지출', name: '지출', color: '#FF85A2' },
                   { dataKey: '잔액', name: '잔액', color: '#B8A9E8' },
+                  { dataKey: '저축', name: '저축', color: '#FFB07A' },
                 ]}
                 height={350}
               />
@@ -155,6 +157,76 @@ export function YearlyReportClient({ initialData }: Props) {
               </Card>
             )}
           </div>
+
+          {/* Savings Summary */}
+          {data.savings.accounts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PiggyBank className="h-5 w-5 text-warm-dark" />
+                  저축 현황
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">연간 총 저축액</span>
+                  <span className="text-lg font-bold text-warm-dark">{formatKRW(data.savings.monthlyDeposits)}</span>
+                </div>
+
+                {data.savings.totalTarget > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">전체 목표 달성률</span>
+                      <span className="font-semibold">
+                        {(data.savings.totalBalance / data.savings.totalTarget * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-warm to-warm-dark rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(data.savings.totalBalance / data.savings.totalTarget * 100, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{formatKRW(data.savings.totalBalance)}</span>
+                      <span>목표: {formatKRW(data.savings.totalTarget)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                  {data.savings.accounts.map((account) => {
+                    const pct = account.target_amount > 0
+                      ? (account.current_balance / account.target_amount) * 100
+                      : 0
+                    return (
+                      <div key={account.id} className="rounded-xl border-2 border-border p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">{PERSON_EMOJI[account.person_type as PersonType]}</span>
+                            <span className="text-sm font-medium">{account.name}</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">{account.person_type}</span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-warm rounded-full transition-all"
+                            style={{ width: `${Math.min(pct, 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-warm-dark font-medium">{formatKRW(account.current_balance)}</span>
+                          {account.target_amount > 0 && (
+                            <span className="text-muted-foreground">{pct.toFixed(0)}%</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

@@ -7,9 +7,9 @@ import { AppLineChart } from '@/components/charts/line-chart'
 import { AppBarChart } from '@/components/charts/bar-chart'
 import { formatKRW } from '@/lib/utils/format'
 import { getQuarterlyReport } from '@/lib/actions/reports'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { CHART_COLORS } from '@/lib/utils/constants'
-import type { QuarterlyReportData } from '@/types'
+import { ChevronLeft, ChevronRight, PiggyBank } from 'lucide-react'
+import { CHART_COLORS, PERSON_EMOJI } from '@/lib/utils/constants'
+import type { QuarterlyReportData, PersonType } from '@/types'
 
 interface Props {
   initialData: QuarterlyReportData
@@ -117,10 +117,11 @@ export function QuarterlyReportClient({ initialData }: Props) {
       />
 
       {/* Quarter Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <QuarterSummaryCard label="분기 수입" amount={data.totalIncome} color="income" />
         <QuarterSummaryCard label="분기 지출" amount={data.totalExpense} color="expense" />
         <QuarterSummaryCard label="분기 잔액" amount={data.balance} color="balance" />
+        <QuarterSummaryCard label="분기 저축" amount={data.savings.monthlyDeposits} color="savings" icon={<PiggyBank className="h-4 w-4" />} />
       </div>
 
       {!hasData ? (
@@ -207,24 +208,90 @@ export function QuarterlyReportClient({ initialData }: Props) {
               </CardContent>
             </Card>
           )}
+
+          {/* Savings Summary */}
+          {data.savings.accounts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>저축 현황</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {data.savings.totalTarget > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">전체 목표 달성률</span>
+                      <span className="font-semibold">
+                        {(data.savings.totalBalance / data.savings.totalTarget * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-warm to-warm-dark rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(data.savings.totalBalance / data.savings.totalTarget * 100, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{formatKRW(data.savings.totalBalance)}</span>
+                      <span>목표: {formatKRW(data.savings.totalTarget)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                  {data.savings.accounts.map((account) => {
+                    const pct = account.target_amount > 0
+                      ? (account.current_balance / account.target_amount) * 100
+                      : 0
+                    return (
+                      <div key={account.id} className="rounded-xl border-2 border-border p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">{PERSON_EMOJI[account.person_type as PersonType]}</span>
+                            <span className="text-sm font-medium">{account.name}</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">{account.person_type}</span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-warm rounded-full transition-all"
+                            style={{ width: `${Math.min(pct, 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-warm-dark font-medium">{formatKRW(account.current_balance)}</span>
+                          {account.target_amount > 0 && (
+                            <span className="text-muted-foreground">{pct.toFixed(0)}%</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>
   )
 }
 
-function QuarterSummaryCard({ label, amount, color }: {
-  label: string; amount: number; color: 'income' | 'expense' | 'balance'
+function QuarterSummaryCard({ label, amount, color, icon }: {
+  label: string; amount: number; color: 'income' | 'expense' | 'balance' | 'savings'; icon?: React.ReactNode
 }) {
   const colorMap = {
     income: 'bg-accent-bg border-accent-light text-accent-dark',
     expense: 'bg-primary-bg border-primary-light text-primary-dark',
     balance: 'bg-secondary-bg border-secondary-light text-secondary-dark',
+    savings: 'bg-warm-bg border-warm-light text-warm-dark',
   }
 
   return (
     <div className={`rounded-2xl border-2 p-4 ${colorMap[color]} transition-all duration-200 hover:shadow-soft`}>
-      <span className="text-sm font-medium opacity-80">{label}</span>
+      <div className="flex items-center gap-1.5">
+        {icon}
+        <span className="text-sm font-medium opacity-80">{label}</span>
+      </div>
       <div className="text-xl font-bold mt-1">{formatKRW(amount)}</div>
     </div>
   )

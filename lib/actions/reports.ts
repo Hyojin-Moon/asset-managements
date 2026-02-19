@@ -162,43 +162,101 @@ async function getMonthTotalsWithBudget(month: string) {
 }
 
 export async function getQuarterlyReport(year: number, quarter: number): Promise<QuarterlyReportData> {
+  const supabase = await createClient()
   const startMonth = (quarter - 1) * 3 + 1
   const monthStrings = Array.from({ length: 3 }, (_, i) => {
     const m = startMonth + i
     return `${year}-${String(m).padStart(2, '0')}`
   })
 
-  const monthlyData = await Promise.all(
-    monthStrings.map(async (month) => {
-      const data = await getMonthTotalsWithBudget(month)
-      return { month, ...data }
-    })
-  )
+  const quarterStart = `${year}-${String(startMonth).padStart(2, '0')}-01`
+  const endMonth = startMonth + 2
+  const endDate = new Date(year, endMonth, 0)
+  const quarterEnd = `${year}-${String(endMonth).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
+
+  const [monthlyData, savingsAccountsRes, savingsTxRes] = await Promise.all([
+    Promise.all(
+      monthStrings.map(async (month) => {
+        const data = await getMonthTotalsWithBudget(month)
+        return { month, ...data }
+      })
+    ),
+    supabase
+      .from('savings_accounts')
+      .select('*')
+      .eq('is_active', true),
+    supabase
+      .from('savings_transactions')
+      .select('amount, transaction_date')
+      .gte('transaction_date', quarterStart)
+      .lte('transaction_date', quarterEnd),
+  ])
+
+  // Per-month savings
+  const savingsByMonth: Record<string, number> = {}
+  for (const tx of savingsTxRes.data ?? []) {
+    const m = tx.transaction_date.substring(0, 7) // YYYY-MM
+    savingsByMonth[m] = (savingsByMonth[m] ?? 0) + tx.amount
+  }
 
   const totalIncome = monthlyData.reduce((s, m) => s + m.totalIncome, 0)
   const totalExpense = monthlyData.reduce((s, m) => s + m.totalExpense, 0)
 
+  const savingsAccounts = savingsAccountsRes.data ?? []
+  const quarterlyDeposits = (savingsTxRes.data ?? []).reduce((s, t) => s + t.amount, 0)
+
   return {
     year,
     quarter,
-    months: monthlyData,
+    months: monthlyData.map(m => ({
+      ...m,
+      savings: savingsByMonth[m.month] ?? 0,
+    })),
     totalIncome,
     totalExpense,
     balance: totalIncome - totalExpense,
+    savings: {
+      accounts: savingsAccounts,
+      monthlyDeposits: quarterlyDeposits,
+      totalBalance: savingsAccounts.reduce((s, a) => s + a.current_balance, 0),
+      totalTarget: savingsAccounts.reduce((s, a) => s + a.target_amount, 0),
+    },
   }
 }
 
 export async function getYearlyReport(year: number): Promise<YearlyReportData> {
+  const supabase = await createClient()
   const monthStrings = Array.from({ length: 12 }, (_, i) =>
     `${year}-${String(i + 1).padStart(2, '0')}`
   )
 
-  const monthlyData = await Promise.all(
-    monthStrings.map(async (month) => {
-      const data = await getMonthTotalsWithBudget(month)
-      return { month, ...data }
-    })
-  )
+  const yearStart = `${year}-01-01`
+  const yearEnd = `${year}-12-31`
+
+  const [monthlyData, savingsAccountsRes, savingsTxRes] = await Promise.all([
+    Promise.all(
+      monthStrings.map(async (month) => {
+        const data = await getMonthTotalsWithBudget(month)
+        return { month, ...data }
+      })
+    ),
+    supabase
+      .from('savings_accounts')
+      .select('*')
+      .eq('is_active', true),
+    supabase
+      .from('savings_transactions')
+      .select('amount, transaction_date')
+      .gte('transaction_date', yearStart)
+      .lte('transaction_date', yearEnd),
+  ])
+
+  // Per-month savings
+  const savingsByMonth: Record<string, number> = {}
+  for (const tx of savingsTxRes.data ?? []) {
+    const m = tx.transaction_date.substring(0, 7) // YYYY-MM
+    savingsByMonth[m] = (savingsByMonth[m] ?? 0) + tx.amount
+  }
 
   const totalIncome = monthlyData.reduce((s, m) => s + m.totalIncome, 0)
   const totalExpense = monthlyData.reduce((s, m) => s + m.totalExpense, 0)
@@ -225,10 +283,14 @@ export async function getYearlyReport(year: number): Promise<YearlyReportData> {
     }
   }
 
+  const savingsAccounts = savingsAccountsRes.data ?? []
+  const yearlyDeposits = (savingsTxRes.data ?? []).reduce((s, t) => s + t.amount, 0)
+
   return {
     year,
     months: monthlyData.map(({ month, totalIncome, totalExpense, balance }) => ({
       month, totalIncome, totalExpense, balance,
+      savings: savingsByMonth[month] ?? 0,
     })),
     totalIncome,
     totalExpense,
@@ -236,5 +298,11 @@ export async function getYearlyReport(year: number): Promise<YearlyReportData> {
     savingsRate,
     byCategory,
     byPerson,
+    savings: {
+      accounts: savingsAccounts,
+      monthlyDeposits: yearlyDeposits,
+      totalBalance: savingsAccounts.reduce((s, a) => s + a.current_balance, 0),
+      totalTarget: savingsAccounts.reduce((s, a) => s + a.target_amount, 0),
+    },
   }
 }

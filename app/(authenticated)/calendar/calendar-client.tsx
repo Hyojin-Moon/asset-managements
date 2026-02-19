@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useTransition, useCallback } from 'react'
+import { useState, useMemo, useTransition, useCallback, useRef, useEffect } from 'react'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, addMonths, subMonths, isSameMonth, isSameDay, isToday, parseISO,
@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Modal } from '@/components/ui/modal'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { DateInput } from '@/components/ui/date-input'
 import { getEvents, createEvent, updateEvent, deleteEvent } from '@/lib/actions/events'
 import { formatKRW } from '@/lib/utils/format'
 import { PERSON_TYPES, PERSON_EMOJI, PERSON_BG_CLASSES } from '@/lib/utils/constants'
@@ -438,14 +439,13 @@ function EventFormModal({
   const [form, setForm] = useState(getInitialForm)
 
   // Reset form when modal opens with new data
-  const prevOpenRef = { current: false }
-  if (open && !prevOpenRef.current) {
-    const newForm = getInitialForm()
-    if (JSON.stringify(newForm) !== JSON.stringify(form)) {
-      setForm(newForm)
+  const prevOpenRef = useRef(false)
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      setForm(getInitialForm())
     }
-  }
-  prevOpenRef.current = open
+    prevOpenRef.current = open
+  }, [open, getInitialForm])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -501,20 +501,20 @@ function EventFormModal({
         />
 
         <div className="grid grid-cols-2 gap-3">
-          <Input
+          <DateInput
             id="event_date"
             label="시작일"
-            type="date"
             value={form.event_date}
-            onChange={(e) => setForm({ ...form, event_date: e.target.value })}
+            onChange={(val) => setForm({ ...form, event_date: val })}
             required
           />
-          <Input
+          <DateInput
             id="event_end_date"
             label="종료일 (선택)"
-            type="date"
             value={form.event_end_date}
-            onChange={(e) => setForm({ ...form, event_end_date: e.target.value })}
+            onChange={(val) => setForm({ ...form, event_end_date: val })}
+            clearable
+            placeholder="선택 안 함"
           />
         </div>
 
