@@ -62,6 +62,7 @@ export function DashboardClient({
         currentDate={currentDate}
         onPrev={() => setCurrentDate((prev) => subMonths(prev, 1))}
         onNext={() => setCurrentDate((prev) => addMonths(prev, 1))}
+        onChange={(date) => setCurrentDate(date)}
       />
 
       {/* Summary Bar */}

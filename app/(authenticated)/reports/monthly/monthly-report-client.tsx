@@ -93,6 +93,7 @@ export function MonthlyReportClient({ initialData }: Props) {
             currentDate={currentDate}
             onPrev={() => changeMonth(subMonths(currentDate, 1))}
             onNext={() => changeMonth(addMonths(currentDate, 1))}
+            onChange={(date) => changeMonth(date)}
           />
         }
       />

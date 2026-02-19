@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { DateInput } from '@/components/ui/date-input'
 import { createTransaction, updateTransaction } from '@/lib/actions/transactions'
 import { PERSON_TYPES } from '@/lib/utils/constants'
 import { toast } from 'sonner'
@@ -165,12 +166,11 @@ export function TransactionForm({ categories, editItem, onSuccess, onCancel, def
         required
       />
 
-      <Input
+      <DateInput
         id="transaction_date"
         label="날짜"
-        type="date"
         value={form.transaction_date}
-        onChange={(e) => setForm({ ...form, transaction_date: e.target.value })}
+        onChange={(v) => setForm({ ...form, transaction_date: v })}
         required
       />
 

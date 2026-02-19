@@ -119,6 +119,10 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
             currentDate={currentDate}
             onPrev={() => navigateMonth('prev')}
             onNext={() => navigateMonth('next')}
+            onChange={(date) => {
+              const newMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+              updateFilter('month', newMonth)
+            }}
           />
         </div>
 

@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Modal } from '@/components/ui/modal'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { DateInput } from '@/components/ui/date-input'
 import {
   getSavingsAccounts,
   createSavingsAccount,
@@ -506,12 +507,11 @@ function TransactionFormModal({
           onChange={(e) => setForm({ ...form, description: e.target.value })}
         />
 
-        <Input
+        <DateInput
           id="transaction_date"
           label="날짜"
-          type="date"
           value={form.transaction_date}
-          onChange={(e) => setForm({ ...form, transaction_date: e.target.value })}
+          onChange={(v) => setForm({ ...form, transaction_date: v })}
           required
         />
 
