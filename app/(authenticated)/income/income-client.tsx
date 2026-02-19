@@ -12,10 +12,11 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { BudgetFormModal } from '@/components/budget/budget-form-modal'
 import { DeleteConfirmModal } from '@/components/budget/delete-confirm-modal'
 import { SortableTableRow, SortableMobileCard } from '@/components/budget/sortable-budget-row'
+import { Modal } from '@/components/ui/modal'
 import { formatKRW } from '@/lib/utils/format'
 import { PERSON_EMOJI } from '@/lib/utils/constants'
-import { updateBudgetItemOrder } from '@/lib/actions/budget'
-import { Plus, Pencil, Trash2, TrendingUp } from 'lucide-react'
+import { generateBudgetTransactions, checkDuplicateBudgetTransactions, updateBudgetItemOrder } from '@/lib/actions/budget'
+import { Plus, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import type { BudgetItem, PersonType } from '@/types'
 
@@ -27,6 +28,14 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editItem, setEditItem] = useState<BudgetItem | null>(null)
   const [deleteItem, setDeleteItem] = useState<{ id: string; name: string } | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [generating, setGenerating] = useState(false)
+  const [dupConfirm, setDupConfirm] = useState<{
+    duplicateNames: string[]
+    newIds: string[]
+  } | null>(null)
+
+  const currentMonth = new Date().toISOString().slice(0, 7)
 
   // items가 서버에서 새로 넘어오면 동기화
   useEffect(() => {
@@ -43,6 +52,80 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
     : items.filter((i) => i.person_type === activeTab)
 
   const total = filtered.reduce((sum, i) => sum + i.amount, 0)
+  const selectedInView = filtered.filter((i) => selected.has(i.id))
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    const allFilteredIds = filtered.map((i) => i.id)
+    const allSelected = allFilteredIds.every((id) => selected.has(id))
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (allSelected) {
+        allFilteredIds.forEach((id) => next.delete(id))
+      } else {
+        allFilteredIds.forEach((id) => next.add(id))
+      }
+      return next
+    })
+  }
+
+  async function handleGenerate() {
+    if (selectedInView.length === 0) {
+      toast.error('거래를 생성할 항목을 선택해주세요')
+      return
+    }
+    setGenerating(true)
+    const ids = selectedInView.map((i) => i.id)
+
+    // 중복 체크
+    const { duplicateIds, newIds } = await checkDuplicateBudgetTransactions(currentMonth, ids)
+
+    if (duplicateIds.length > 0) {
+      if (newIds.length === 0) {
+        toast.info('선택한 항목은 이미 모두 생성되었습니다')
+        setGenerating(false)
+        return
+      }
+      const duplicateNames = items
+        .filter((i) => duplicateIds.includes(i.id))
+        .map((i) => i.name)
+      setDupConfirm({ duplicateNames, newIds })
+      setGenerating(false)
+      return
+    }
+
+    await executeGenerate(ids)
+  }
+
+  async function executeGenerate(ids: string[]) {
+    setGenerating(true)
+    const result = await generateBudgetTransactions(currentMonth, ids)
+    if (result.success) {
+      toast.success(`${result.created}건의 거래가 생성되었습니다`)
+      setSelected((prev) => {
+        const next = new Set(prev)
+        ids.forEach((id) => next.delete(id))
+        return next
+      })
+    } else {
+      toast.error(result.error || '거래 생성에 실패했습니다')
+    }
+    setGenerating(false)
+  }
+
+  async function handleDupConfirm() {
+    if (!dupConfirm) return
+    setDupConfirm(null)
+    await executeGenerate(dupConfirm.newIds)
+  }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -75,9 +158,19 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
         title="수입 관리"
         description="고정 수입 항목을 관리합니다"
         action={
-          <Button onClick={() => { setEditItem(null); setFormOpen(true) }}>
-            <Plus className="h-4 w-4" /> 추가
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleGenerate}
+              disabled={generating || selectedInView.length === 0}
+            >
+              <Zap className="h-4 w-4" />
+              {generating ? '생성 중...' : `거래 생성 (${selectedInView.length})`}
+            </Button>
+            <Button onClick={() => { setEditItem(null); setFormOpen(true) }}>
+              <Plus className="h-4 w-4" /> 추가
+            </Button>
+          </div>
         }
       />
 
@@ -128,6 +221,14 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
                   <thead>
                     <tr className="border-b-2 border-border text-muted-foreground">
                       <th className="w-8" />
+                      <th className="py-3 px-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={filtered.length > 0 && filtered.every((i) => selected.has(i.id))}
+                          onChange={toggleAll}
+                          className="h-4 w-4 rounded accent-primary"
+                        />
+                      </th>
                       <th className="text-left py-3 px-3 font-medium">인물</th>
                       <th className="text-left py-3 px-3 font-medium">항목명</th>
                       <th className="text-right py-3 px-3 font-medium">금액</th>
@@ -139,6 +240,14 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
                   <tbody>
                     {filtered.map((item) => (
                       <SortableTableRow key={item.id} id={item.id}>
+                        <td className="py-3 px-3">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(item.id)}
+                            onChange={() => toggleSelect(item.id)}
+                            className="h-4 w-4 rounded accent-primary"
+                          />
+                        </td>
                         <td className="py-3 px-3">
                           <Badge variant="person">
                             {PERSON_EMOJI[item.person_type]} {item.person_type}
@@ -171,7 +280,7 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-border">
-                      <td />
+                      <td colSpan={2} />
                       <td colSpan={2} className="py-3 px-3 font-semibold">합계</td>
                       <td className="py-3 px-3 text-right font-bold text-accent-dark">{formatKRW(total)}</td>
                       <td colSpan={3} />
@@ -194,6 +303,12 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
               <SortableContext items={filtered.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                 {filtered.map((item) => (
                   <SortableMobileCard key={item.id} id={item.id} className="flex items-center gap-2 p-3 rounded-xl bg-muted/50">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(item.id)}
+                      onChange={() => toggleSelect(item.id)}
+                      className="h-4 w-4 rounded accent-primary shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant="person" className="text-[10px]">
@@ -241,6 +356,49 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
           itemId={deleteItem.id}
           itemName={deleteItem.name}
         />
+      )}
+
+      {dupConfirm && (
+        <Modal
+          open={!!dupConfirm}
+          onClose={() => setDupConfirm(null)}
+          title="중복 항목 확인"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              다음 항목은 이미 이번 달 거래가 생성되어 있습니다:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {dupConfirm.duplicateNames.map((name) => (
+                <span
+                  key={name}
+                  className="px-3 py-1.5 rounded-lg bg-accent-bg text-accent-dark text-sm font-medium"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+            <p className="text-sm">
+              중복 항목을 제외하고 <strong className="text-accent-dark">{dupConfirm.newIds.length}건</strong>을 추가하시겠습니까?
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setDupConfirm(null)}
+              >
+                취소
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleDupConfirm}
+                disabled={generating}
+              >
+                {generating ? '생성 중...' : '추가'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   )

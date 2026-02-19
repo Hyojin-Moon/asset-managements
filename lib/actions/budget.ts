@@ -229,7 +229,6 @@ export async function generateBudgetTransactions(
     .select('*')
     .in('id', budgetItemIds)
     .eq('is_active', true)
-    .eq('type', 'expense')
 
   if (fetchError) return { success: false, created: 0, skipped: 0, error: fetchError.message }
   if (!budgetItems || budgetItems.length === 0) return { success: true, created: 0, skipped: 0 }
@@ -255,7 +254,7 @@ export async function generateBudgetTransactions(
     .filter((b) => !existingSet.has(b.id))
     .map((b) => ({
       family_id: familyId,
-      type: 'expense' as const,
+      type: b.type,
       category_id: b.category_id || null,
       person_type: b.person_type,
       description: b.name,
@@ -263,7 +262,7 @@ export async function generateBudgetTransactions(
       transaction_date: `${month}-01`,
       is_emergency: false,
       budget_item_id: b.id,
-      memo: '고정지출 자동생성',
+      memo: b.type === 'income' ? '고정수입 자동생성' : '고정지출 자동생성',
       created_by: user?.id || null,
     }))
 
@@ -278,6 +277,7 @@ export async function generateBudgetTransactions(
   if (insertError) return { success: false, created: 0, skipped: 0, error: insertError.message }
 
   revalidatePath('/transactions')
+  revalidatePath('/income')
   revalidatePath('/expenses')
   revalidatePath('/dashboard')
   revalidatePath('/reports/monthly')

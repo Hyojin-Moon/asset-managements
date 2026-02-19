@@ -194,22 +194,20 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
           onChange={(e) => setForm({ ...form, memo: e.target.value })}
         />
 
-        {isExpense && (
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-accent-bg/50 cursor-pointer hover:bg-accent-bg transition-colors">
-            <input
-              type="checkbox"
-              checked={form.auto_generate}
-              onChange={(e) => setForm({ ...form, auto_generate: e.target.checked })}
-              className="h-4 w-4 rounded accent-accent"
-            />
-            <div className="flex-1">
-              <span className="text-sm font-medium">거래내역에 매월 추가하기</span>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                체크하면 해당 항목이 매월 거래내역에 자동으로 추가됩니다
-              </p>
-            </div>
-          </label>
-        )}
+        <label className="flex items-center gap-3 p-3 rounded-xl bg-accent-bg/50 cursor-pointer hover:bg-accent-bg transition-colors">
+          <input
+            type="checkbox"
+            checked={form.auto_generate}
+            onChange={(e) => setForm({ ...form, auto_generate: e.target.checked })}
+            className="h-4 w-4 rounded accent-accent"
+          />
+          <div className="flex-1">
+            <span className="text-sm font-medium">거래내역에 매월 추가하기</span>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              체크하면 해당 항목이 매월 거래내역에 자동으로 추가됩니다
+            </p>
+          </div>
+        </label>
 
         <div className="flex gap-3 mt-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
