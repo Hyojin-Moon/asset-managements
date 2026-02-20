@@ -45,6 +45,5 @@ feat: 변경 요약
 ## 주의사항
 
 - 커밋 메시지에 Claude Code 관련 문구 절대 포함 금지
-- 커밋 메시지에 cursor 관련 문구 절대 포함 금지 ( Co-authored-by: Cursor cursoragent@cursor.com 등)
 - .env, credentials.json 등 민감한 파일 커밋 주의
 - 커밋 전 변경사항 사용자에게 보여주고 묻지말고 바로 커밋 푸시
