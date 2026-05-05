@@ -253,7 +253,20 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
                             {PERSON_EMOJI[item.person_type]} {item.person_type}
                           </Badge>
                         </td>
-                        <td className="py-3 px-3 font-medium">{item.name}</td>
+                        <td className="py-3 px-3 font-medium">
+                          <div className="flex items-center gap-2">
+                            <span>{item.name}</span>
+                            {item.auto_generate && (
+                              <span
+                                className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 bg-accent-bg text-accent-dark text-[10px] font-semibold shrink-0"
+                                title="매월 자동 등록"
+                              >
+                                <Zap className="h-2.5 w-2.5" />
+                                매월
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-3 px-3 text-right font-semibold text-accent-dark">
                           {formatKRW(item.amount)}
                         </td>
@@ -315,6 +328,15 @@ export function IncomeClient({ items: initialItems }: { items: BudgetItem[] }) {
                           {PERSON_EMOJI[item.person_type]} {item.person_type}
                         </Badge>
                         <span className="font-medium text-sm truncate">{item.name}</span>
+                        {item.auto_generate && (
+                          <span
+                            className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 bg-accent-bg text-accent-dark text-[10px] font-semibold shrink-0"
+                            title="매월 자동 등록"
+                          >
+                            <Zap className="h-2.5 w-2.5" />
+                            매월
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {item.effective_from.slice(0, 7)} ~ {item.effective_until?.slice(0, 7) || '무기한'}
