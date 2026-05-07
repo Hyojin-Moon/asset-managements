@@ -79,15 +79,24 @@ export async function getTransactions(filters: {
   return { data: mapped, count: count ?? 0 }
 }
 
-export async function getRecentTransactions(limit: number = 5) {
+export async function getRecentTransactions(limit: number = 5, month?: string) {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('transactions')
     .select('*, expense_categories(name)')
     .order('transaction_date', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(limit)
+
+  if (month) {
+    const start = `${month}-01`
+    const [y, m] = month.split('-').map(Number)
+    const endDate = new Date(y, m, 0)
+    const end = `${y}-${String(m).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
+    query = query.gte('transaction_date', start).lte('transaction_date', end)
+  }
+
+  const { data, error } = await query.limit(limit)
 
   if (error) {
     console.error('getRecentTransactions error:', error)

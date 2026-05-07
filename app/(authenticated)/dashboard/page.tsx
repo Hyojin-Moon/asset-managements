@@ -10,7 +10,7 @@ export default async function DashboardPage() {
 
   const [totals, recentTx, incomeItems, expenseItems, upcomingEvents, savingsAccounts] = await Promise.all([
     getMonthlyTotals(currentMonth),
-    getRecentTransactions(5),
+    getRecentTransactions(5, currentMonth),
     getBudgetItems({ type: 'income', month: currentMonth }),
     getBudgetItems({ type: 'expense', month: currentMonth }),
     getUpcomingEvents(3),

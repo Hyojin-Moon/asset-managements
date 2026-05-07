@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { MonthPicker } from '@/components/ui/month-picker'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { formatKRW } from '@/lib/utils/format'
 import { addMonths, subMonths } from '@/lib/utils/date'
 import { PERSON_EMOJI } from '@/lib/utils/constants'
+import { getMonthlyTotals, getRecentTransactions } from '@/lib/actions/transactions'
+import { getBudgetItems } from '@/lib/actions/budget'
 import {
   TrendingUp, TrendingDown, Wallet,
   ArrowRight, CalendarDays, PiggyBank,
@@ -41,13 +42,41 @@ export function DashboardClient({
 }: DashboardProps) {
   const [y, m] = initialMonth.split('-').map(Number)
   const [currentDate, setCurrentDate] = useState(new Date(y, m - 1, 1))
-  const totals = initialTotals
-  const recentTx = initialRecentTx
+  const [totals, setTotals] = useState(initialTotals)
+  const [recentTx, setRecentTx] = useState(initialRecentTx)
+  const [budgetIncomeVal, setBudgetIncomeVal] = useState(budgetIncome)
+  const [budgetExpenseVal, setBudgetExpenseVal] = useState(budgetExpense)
+  const [isPending, startTransition] = useTransition()
+
+  function monthFromDate(d: Date) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }
+
+  function loadMonth(d: Date) {
+    const month = monthFromDate(d)
+    startTransition(async () => {
+      const [t, rtx, incomeItems, expenseItems] = await Promise.all([
+        getMonthlyTotals(month),
+        getRecentTransactions(5, month),
+        getBudgetItems({ type: 'income', month }),
+        getBudgetItems({ type: 'expense', month }),
+      ])
+      setTotals(t)
+      setRecentTx(rtx)
+      setBudgetIncomeVal(incomeItems.reduce((s, i) => s + i.amount, 0))
+      setBudgetExpenseVal(expenseItems.reduce((s, i) => s + i.amount, 0))
+    })
+  }
+
+  function goToMonth(d: Date) {
+    setCurrentDate(d)
+    loadMonth(d)
+  }
 
   // Use actual totals if they exist, otherwise show budget as reference
-  const displayIncome = totals.totalIncome || budgetIncome
-  const displayExpense = totals.totalExpense || budgetExpense
-  const displayBalance = totals.totalIncome - totals.totalExpense
+  const displayIncome = totals.totalIncome || budgetIncomeVal
+  const displayExpense = totals.totalExpense || budgetExpenseVal
+  const displayBalance = displayIncome - displayExpense
 
   const personOrder: PersonType[] = ['공통', '효진', '호영', '정우']
   const totalPersonExpense = Object.values(totals.byPerson).reduce((s, p) => s + p.expense, 0) || 1
@@ -56,13 +85,13 @@ export function DashboardClient({
   const categoryEntries = Object.entries(totals.byCategory).sort((a, b) => b[1] - a[1])
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isPending ? 'opacity-60 pointer-events-none' : ''}`}>
       {/* Month Picker */}
       <MonthPicker
         currentDate={currentDate}
-        onPrev={() => setCurrentDate((prev) => subMonths(prev, 1))}
-        onNext={() => setCurrentDate((prev) => addMonths(prev, 1))}
-        onChange={(date) => setCurrentDate(date)}
+        onPrev={() => goToMonth(subMonths(currentDate, 1))}
+        onNext={() => goToMonth(addMonths(currentDate, 1))}
+        onChange={(date) => goToMonth(date)}
       />
 
       {/* Summary Bar */}
