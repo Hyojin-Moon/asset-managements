@@ -21,15 +21,27 @@ import {
   exportTransactionsCSV, exportBudgetCSV, exportEventsCSV,
 } from '@/lib/actions/settings'
 import { logout } from '@/lib/actions/auth'
-import type { ExpenseCategory, CategoryMappingRule, Profile, PersonType } from '@/types'
+import type {
+  ExpenseCategory, CategoryMappingRule, Profile, PersonType,
+  GoogleCalendarConnection, GoogleCalendarSubscription,
+} from '@/types'
+import { GoogleCalendarSection } from './google-calendar-section'
 
 interface Props {
   categories: ExpenseCategory[]
   mappingRules: CategoryMappingRule[]
   profile: Profile | null
+  googleConnection: GoogleCalendarConnection | null
+  googleSubscriptions: GoogleCalendarSubscription[]
 }
 
-export function SettingsClient({ categories, mappingRules, profile }: Props) {
+export function SettingsClient({
+  categories,
+  mappingRules,
+  profile,
+  googleConnection,
+  googleSubscriptions,
+}: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -39,6 +51,10 @@ export function SettingsClient({ categories, mappingRules, profile }: Props) {
 
       <CategorySection categories={categories} />
       <MappingRulesSection rules={mappingRules} categories={categories} />
+      <GoogleCalendarSection
+        connection={googleConnection}
+        subscriptions={googleSubscriptions}
+      />
       <DataExportSection />
       <AccountSection profile={profile} />
     </div>

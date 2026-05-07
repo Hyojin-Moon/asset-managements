@@ -104,8 +104,45 @@ export interface Event {
   actual_cost: number
   person_type: PersonType
   is_recurring: boolean
+  source: 'manual' | 'google'
+  google_event_id?: string | null
+  google_calendar_id?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface GoogleCalendarConnection {
+  id: string
+  family_id: string
+  user_id: string
+  google_email: string
+  token_expires_at: string
+  default_person_type: PersonType
+  is_owner: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface GoogleCalendarSubscription {
+  id: string
+  connection_id: string
+  family_id: string
+  google_calendar_id: string
+  calendar_name: string
+  background_color?: string | null
+  sync_token?: string | null
+  last_synced_at?: string | null
+  enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface GoogleCalendarListItem {
+  id: string
+  summary: string
+  primary?: boolean
+  backgroundColor?: string
+  accessRole?: string
 }
 
 export interface MonthlySummary {
