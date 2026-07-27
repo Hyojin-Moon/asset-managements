@@ -11,9 +11,9 @@ import { getMonthlyTotals, getRecentTransactions } from '@/lib/actions/transacti
 import { getBudgetItems } from '@/lib/actions/budget'
 import {
   TrendingUp, TrendingDown, Wallet,
-  ArrowRight, CalendarDays, PiggyBank,
+  ArrowRight, PiggyBank,
 } from 'lucide-react'
-import type { Transaction, Event, SavingsAccount, PersonType } from '@/types'
+import type { Transaction, SavingsAccount, PersonType } from '@/types'
 
 interface DashboardProps {
   initialMonth: string
@@ -27,7 +27,6 @@ interface DashboardProps {
   initialRecentTx: Transaction[]
   budgetIncome: number
   budgetExpense: number
-  upcomingEvents: Event[]
   savingsAccounts: SavingsAccount[]
 }
 
@@ -37,7 +36,6 @@ export function DashboardClient({
   initialRecentTx,
   budgetIncome,
   budgetExpense,
-  upcomingEvents,
   savingsAccounts,
 }: DashboardProps) {
   const [y, m] = initialMonth.split('-').map(Number)
@@ -192,43 +190,6 @@ export function DashboardClient({
                     }`}>
                       {tx.type === 'income' ? '+' : '-'}{formatKRW(tx.amount)}
                     </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Events */}
-        <Card hover>
-          <CardHeader>
-            <CardTitle>
-              <span className="flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-secondary" />
-                다가오는 이벤트
-              </span>
-            </CardTitle>
-            <Link href="/calendar" className="flex items-center gap-1 text-xs text-primary font-medium hover:text-primary-dark transition-colors">
-              전체 <ArrowRight className="h-3 w-3" />
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {upcomingEvents.length === 0 ? (
-              <EmptyBox emoji="📅" text="예정된 이벤트가 없어요" />
-            ) : (
-              <div className="space-y-2.5">
-                {upcomingEvents.map((event) => (
-                  <div key={event.id} className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-secondary-bg flex items-center justify-center text-xs shrink-0">
-                      {PERSON_EMOJI[event.person_type]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{event.title}</div>
-                      <div className="text-[10px] text-muted-foreground">{event.event_date}</div>
-                    </div>
-                    {event.estimated_cost > 0 && (
-                      <span className="text-xs text-muted-foreground shrink-0">{formatKRW(event.estimated_cost)}</span>
-                    )}
                   </div>
                 ))}
               </div>

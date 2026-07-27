@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getMonthlyTotals } from './transactions'
 import { getBudgetItems } from './budget'
-import type { MonthlyReportData, QuarterlyReportData, YearlyReportData, CategoryBudgetStatus, MonthlySavingsData } from '@/types'
+import type { MonthlyReportData, QuarterlyReportData, YearlyReportData, CategoryBudgetStatus, MonthlySavingsData, MonthlyReportDetail, TransactionType } from '@/types'
 
 export async function getMonthlyReport(month: string): Promise<MonthlyReportData> {
   const supabase = await createClient()
@@ -18,7 +18,7 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
   const end = `${y}-${String(m).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
 
   // Fetch all data in parallel
-  const [current, prev, expenseBudgets, incomeBudgets, prevIncomeBudgets, prevExpenseBudgets, categoriesRes, savingsAccountsRes, savingsTxRes] = await Promise.all([
+  const [current, prev, expenseBudgets, incomeBudgets, prevIncomeBudgets, prevExpenseBudgets, categoriesRes, savingsAccountsRes, savingsTxRes, transactionsRes] = await Promise.all([
     getMonthlyTotals(month),
     getMonthlyTotals(prevMonth),
     getBudgetItems({ type: 'expense', month }),
@@ -39,6 +39,13 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
       .select('amount')
       .gte('transaction_date', start)
       .lte('transaction_date', end),
+    supabase
+      .from('transactions')
+      .select('id, type, person_type, category_id, description, amount, transaction_date, memo, expense_categories(name)')
+      .gte('transaction_date', start)
+      .lte('transaction_date', end)
+      .order('transaction_date', { ascending: false })
+      .order('created_at', { ascending: false }),
   ])
 
   // budget_items 합산 (transactions가 없을 때 예산 기준 표시)
@@ -57,15 +64,9 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
   const plannedExpense = budgetExpense
 
   // 카테고리별 한도 현황에 필요한 실제 지출 데이터
-  const { data: txData } = await supabase
-    .from('transactions')
-    .select('category_id, amount, expense_categories(name)')
-    .eq('type', 'expense')
-    .gte('transaction_date', start)
-    .lte('transaction_date', end)
-
   const actualByCategory: Record<string, { name: string; amount: number }> = {}
-  for (const row of txData ?? []) {
+  for (const row of transactionsRes.data ?? []) {
+    if (row.type !== 'expense') continue
     const catId = row.category_id ?? 'uncategorized'
     const catName = ((row.expense_categories as unknown) as { name: string } | null)?.name ?? '미분류'
     if (!actualByCategory[catId]) {
@@ -100,17 +101,37 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
   }
 
   // Daily expenses
-  const { data: dailyData } = await supabase
-    .from('transactions')
-    .select('transaction_date, amount')
-    .eq('type', 'expense')
-    .gte('transaction_date', start)
-    .lte('transaction_date', end)
-    .order('transaction_date', { ascending: true })
-
   const dailyMap: Record<string, number> = {}
-  for (const row of dailyData ?? []) {
+  for (const row of transactionsRes.data ?? []) {
+    if (row.type !== 'expense') continue
     dailyMap[row.transaction_date] = (dailyMap[row.transaction_date] ?? 0) + row.amount
+  }
+
+  function buildDetails(type: TransactionType): MonthlyReportDetail[] {
+    const transactions = (transactionsRes.data ?? []).filter((row) => row.type === type)
+    if (transactions.length > 0) {
+      return transactions.map((row) => ({
+        id: row.id,
+        description: row.description,
+        amount: row.amount,
+        person_type: row.person_type,
+        category_name: ((row.expense_categories as unknown) as { name: string } | null)?.name ?? null,
+        transaction_date: row.transaction_date,
+        memo: row.memo,
+        source: 'transaction',
+      }))
+    }
+
+    const budgets = type === 'income' ? incomeBudgets : expenseBudgets
+    return budgets.map((item) => ({
+      id: item.id,
+      description: item.name,
+      amount: item.amount,
+      person_type: item.person_type,
+      category_name: item.category_name,
+      memo: item.memo,
+      source: 'budget',
+    }))
   }
 
   // Fill all days of the month
@@ -135,6 +156,8 @@ export async function getMonthlyReport(month: string): Promise<MonthlyReportData
     dailyExpenses,
     categoryBudgetStatus,
     savings,
+    incomeDetails: buildDetails('income'),
+    expenseDetails: buildDetails('expense'),
   }
 }
 

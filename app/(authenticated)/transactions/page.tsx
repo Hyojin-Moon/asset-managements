@@ -18,6 +18,7 @@ export default async function TransactionsPage({
       categoryId: params.category,
       type: params.type as never,
       search: params.search,
+      sort: params.sort === 'name' || params.sort === 'oldest' ? params.sort : 'date',
       page,
       pageSize: 30,
     }),

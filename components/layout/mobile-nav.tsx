@@ -20,7 +20,7 @@ export function MobileNav() {
             item.href === '/dashboard'
               ? pathname === '/dashboard'
               : item.href === '/more'
-                ? pathname === '/more' || ['/income', '/expenses', '/card-upload', '/calendar', '/savings', '/settings'].some(p => pathname.startsWith(p))
+                ? pathname === '/more' || ['/income', '/expenses', '/card-upload', '/savings', '/settings'].some(p => pathname.startsWith(p))
                 : pathname.startsWith(item.href)
           const isAdd = item.icon === 'Plus'
 

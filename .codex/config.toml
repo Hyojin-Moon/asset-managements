@@ -1,0 +1,4 @@
+# Generated from .claude/settings*.json on 2026-06-24.
+# This file is local-only; .codex/ is added to .gitignore.
+sandbox_mode = "danger-full-access"
+approval_policy = "never"

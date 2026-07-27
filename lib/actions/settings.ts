@@ -148,25 +148,3 @@ export async function exportBudgetCSV(): Promise<{ success: boolean; csv?: strin
   const csv = [header, ...csvRows].join('\n')
   return { success: true, csv }
 }
-
-export async function exportEventsCSV(): Promise<{ success: boolean; csv?: string; error?: string }> {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .order('event_date', { ascending: false })
-
-  if (error) return { success: false, error: error.message }
-
-  const rows = data ?? []
-  const header = '날짜,종료일,제목,인물,예상비용,실제비용,설명'
-  const csvRows = rows.map((row) => {
-    const desc = (row.description ?? '').replace(/"/g, '""')
-    const title = (row.title ?? '').replace(/"/g, '""')
-    return `${row.event_date},${row.event_end_date ?? ''},"${title}",${row.person_type},${row.estimated_cost},${row.actual_cost},"${desc}"`
-  })
-
-  const csv = [header, ...csvRows].join('\n')
-  return { success: true, csv }
-}

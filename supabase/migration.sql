@@ -4,6 +4,8 @@
 -- ============================================================
 
 -- 기존 테이블 제거 (역순)
+DROP TABLE IF EXISTS google_calendar_subscriptions CASCADE;
+DROP TABLE IF EXISTS google_calendar_connections CASCADE;
 DROP TABLE IF EXISTS category_mapping_rules CASCADE;
 DROP TABLE IF EXISTS savings_transactions CASCADE;
 DROP TABLE IF EXISTS savings_accounts CASCADE;
@@ -147,23 +149,6 @@ CREATE TABLE card_statement_rows (
 CREATE INDEX idx_card_rows_import ON card_statement_rows(import_id);
 CREATE INDEX idx_card_rows_family ON card_statement_rows(family_id);
 
-CREATE TABLE events (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  family_id UUID REFERENCES families(id) ON DELETE CASCADE NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT,
-  event_date DATE NOT NULL,
-  event_end_date DATE,
-  estimated_cost INTEGER DEFAULT 0,
-  actual_cost INTEGER DEFAULT 0,
-  person_type person_type NOT NULL DEFAULT '공통',
-  is_recurring BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
-);
-CREATE INDEX idx_events_family ON events(family_id);
-CREATE INDEX idx_events_date ON events(family_id, event_date);
-
 CREATE TABLE monthly_summaries (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   family_id UUID REFERENCES families(id) ON DELETE CASCADE NOT NULL,
@@ -244,8 +229,6 @@ CREATE TRIGGER update_budget_items_updated_at
   BEFORE UPDATE ON budget_items FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER update_transactions_updated_at
   BEFORE UPDATE ON transactions FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER update_events_updated_at
-  BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER update_monthly_summaries_updated_at
   BEFORE UPDATE ON monthly_summaries FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER update_savings_accounts_updated_at
@@ -263,7 +246,6 @@ ALTER TABLE budget_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE card_statement_imports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE card_statement_rows ENABLE ROW LEVEL SECURITY;
-ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE monthly_summaries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE savings_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE savings_transactions ENABLE ROW LEVEL SECURITY;
@@ -304,12 +286,6 @@ CREATE POLICY "select_card_rows" ON card_statement_rows FOR SELECT USING (family
 CREATE POLICY "insert_card_rows" ON card_statement_rows FOR INSERT WITH CHECK (family_id = get_my_family_id());
 CREATE POLICY "update_card_rows" ON card_statement_rows FOR UPDATE USING (family_id = get_my_family_id());
 CREATE POLICY "delete_card_rows" ON card_statement_rows FOR DELETE USING (family_id = get_my_family_id());
-
--- events
-CREATE POLICY "select_events" ON events FOR SELECT USING (family_id = get_my_family_id());
-CREATE POLICY "insert_events" ON events FOR INSERT WITH CHECK (family_id = get_my_family_id());
-CREATE POLICY "update_events" ON events FOR UPDATE USING (family_id = get_my_family_id());
-CREATE POLICY "delete_events" ON events FOR DELETE USING (family_id = get_my_family_id());
 
 -- monthly_summaries
 CREATE POLICY "select_summaries" ON monthly_summaries FOR SELECT USING (family_id = get_my_family_id());

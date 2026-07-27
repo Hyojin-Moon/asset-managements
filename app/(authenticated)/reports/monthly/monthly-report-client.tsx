@@ -4,14 +4,16 @@ import { useState, useTransition } from 'react'
 import { MonthPicker } from '@/components/ui/month-picker'
 import { Header } from '@/components/layout/header'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Modal } from '@/components/ui/modal'
 import { AppPieChart } from '@/components/charts/pie-chart'
 import { AppLineChart } from '@/components/charts/line-chart'
 import { formatKRW, formatPercent } from '@/lib/utils/format'
-import { addMonths, subMonths } from '@/lib/utils/date'
+import { addMonths, formatDate, subMonths } from '@/lib/utils/date'
 import { CHART_COLORS, PERSON_EMOJI } from '@/lib/utils/constants'
 import { getMonthlyReport } from '@/lib/actions/reports'
 import { TrendingUp, TrendingDown, Wallet, PiggyBank, CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
-import type { MonthlyReportData, PersonType } from '@/types'
+import type { MonthlyReportData, MonthlyReportDetail, PersonType, TransactionType } from '@/types'
 
 const PERSON_PIE_COLORS = ['#FF85A2', '#7EB8E4', '#FFB07A', '#7ED4BC']
 
@@ -23,9 +25,11 @@ export function MonthlyReportClient({ initialData }: Props) {
   const [y, m] = initialData.month.split('-').map(Number)
   const [currentDate, setCurrentDate] = useState(new Date(y, m - 1, 1))
   const [data, setData] = useState(initialData)
+  const [detailType, setDetailType] = useState<TransactionType | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function changeMonth(newDate: Date) {
+    setDetailType(null)
     setCurrentDate(newDate)
     const month = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`
     startTransition(async () => {
@@ -106,6 +110,7 @@ export function MonthlyReportClient({ initialData }: Props) {
           change={incomeChange}
           icon={<TrendingUp className="h-5 w-5" />}
           color="income"
+          onClick={() => setDetailType('income')}
         />
         <SummaryCard
           label="총지출"
@@ -114,6 +119,7 @@ export function MonthlyReportClient({ initialData }: Props) {
           icon={<TrendingDown className="h-5 w-5" />}
           color="expense"
           invertChange
+          onClick={() => setDetailType('expense')}
         />
         <SummaryCard
           label="잔액"
@@ -342,17 +348,27 @@ export function MonthlyReportClient({ initialData }: Props) {
           )}
         </>
       )}
+
+      <ReportDetailModal
+        key={`${detailType}-${data.month}`}
+        open={detailType !== null}
+        onClose={() => setDetailType(null)}
+        type={detailType ?? 'income'}
+        month={data.month}
+        items={detailType === 'expense' ? data.expenseDetails : data.incomeDetails}
+      />
     </div>
   )
 }
 
-function SummaryCard({ label, amount, change, icon, color, invertChange }: {
+function SummaryCard({ label, amount, change, icon, color, invertChange, onClick }: {
   label: string
   amount: number
   change?: number
   icon: React.ReactNode
   color: 'income' | 'expense' | 'balance' | 'savings'
   invertChange?: boolean
+  onClick?: () => void
 }) {
   const colorMap = {
     income: 'bg-accent-bg border-accent-light text-accent-dark',
@@ -369,8 +385,8 @@ function SummaryCard({ label, amount, change, icon, color, invertChange }: {
 
   const isPositive = invertChange ? (change ?? 0) <= 0 : (change ?? 0) >= 0
 
-  return (
-    <div className={`rounded-2xl border-2 p-3 sm:p-4 ${colorMap[color]} transition-all duration-200 hover:shadow-soft`}>
+  const content = (
+    <>
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs sm:text-sm font-medium opacity-80">{label}</span>
         <div className={`h-7 w-7 sm:h-8 sm:w-8 rounded-xl ${iconBg[color]} flex items-center justify-center`}>{icon}</div>
@@ -381,6 +397,144 @@ function SummaryCard({ label, amount, change, icon, color, invertChange }: {
           전월 대비 {formatPercent(change)}
         </p>
       )}
-    </div>
+    </>
+  )
+
+  const className = `w-full rounded-2xl border-2 p-3 sm:p-4 text-left ${colorMap[color]} transition-all duration-200 hover:shadow-soft`
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`${className} cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 hover:-translate-y-0.5`}
+        aria-label={`${label} ${formatKRW(amount)} 상세 내역 보기`}
+      >
+        {content}
+        <span className="mt-2 block text-[10px] font-medium opacity-60">클릭하여 내역 보기</span>
+      </button>
+    )
+  }
+
+  return <div className={className}>{content}</div>
+}
+
+function ReportDetailModal({ open, onClose, type, month, items }: {
+  open: boolean
+  onClose: () => void
+  type: TransactionType
+  month: string
+  items: MonthlyReportDetail[]
+}) {
+  const [selectedCategory, setSelectedCategory] = useState('__all__')
+  const [sortOrder, setSortOrder] = useState<'date' | 'oldest' | 'name'>('date')
+  const [year, monthNumber] = month.split('-').map(Number)
+  const label = type === 'income' ? '수입' : '지출'
+  const isIncome = type === 'income'
+  const categoryOptions = Array.from(
+    new Set(items.map((item) => item.category_name?.trim() || '미분류'))
+  ).sort((a, b) => a.localeCompare(b, 'ko'))
+  const filteredItems = selectedCategory === '__all__'
+    ? items
+    : items.filter((item) => (item.category_name?.trim() || '미분류') === selectedCategory)
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    if (sortOrder === 'name') {
+      return a.description.localeCompare(b.description, 'ko')
+    }
+    const dateComparison = sortOrder === 'oldest'
+      ? (a.transaction_date ?? '').localeCompare(b.transaction_date ?? '')
+      : (b.transaction_date ?? '').localeCompare(a.transaction_date ?? '')
+    return dateComparison || a.description.localeCompare(b.description, 'ko')
+  })
+  const total = filteredItems.reduce((sum, item) => sum + item.amount, 0)
+  const isBudgetFallback = items.length > 0 && items.every((item) => item.source === 'budget')
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`${year}년 ${monthNumber}월 ${label} 내역`}
+      className="max-w-2xl"
+    >
+      <div className="mb-4 space-y-3 rounded-xl bg-muted/60 px-4 py-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <label className="min-w-0 text-xs font-medium text-muted-foreground sm:w-52">
+              카테고리
+              <select
+                value={selectedCategory}
+                onChange={(event) => setSelectedCategory(event.target.value)}
+                className="mt-1 block h-9 w-full rounded-lg border-2 border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
+              >
+                <option value="__all__">전체 카테고리</option>
+                {categoryOptions.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </label>
+            <label className="min-w-0 text-xs font-medium text-muted-foreground sm:w-40">
+              정렬
+              <select
+                value={sortOrder}
+                onChange={(event) => setSortOrder(event.target.value as 'date' | 'oldest' | 'name')}
+                className="mt-1 block h-9 w-full rounded-lg border-2 border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
+              >
+                <option value="date">날짜순 (최신순)</option>
+                <option value="oldest">날짜순 (오래된순)</option>
+                <option value="name">이름순 (가나다순)</option>
+              </select>
+            </label>
+          </div>
+          <div className="shrink-0 self-end text-right">
+            <p className="text-xs text-muted-foreground">총 {filteredItems.length}건</p>
+            <p className={`text-xl font-bold leading-tight sm:text-2xl ${isIncome ? 'text-accent-dark' : 'text-primary-dark'}`}>
+              {formatKRW(total)}
+            </p>
+          </div>
+        </div>
+        {isBudgetFallback && (
+          <p className="text-[11px] text-muted-foreground">등록된 거래가 없어 고정 {label} 항목을 표시합니다</p>
+        )}
+      </div>
+
+      {filteredItems.length === 0 ? (
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          선택한 카테고리의 {label} 내역이 없어요
+        </div>
+      ) : (
+        <div className="max-h-[60vh] divide-y divide-border/60 overflow-y-auto pr-1">
+          {sortedItems.map((item) => (
+            <div key={`${item.source}-${item.id}`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                isIncome ? 'bg-accent-bg text-accent-dark' : 'bg-primary-bg text-primary-dark'
+              }`}>
+                <span className="text-sm">{isIncome ? '💰' : PERSON_EMOJI[item.person_type]}</span>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{item.description}</p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span>{item.person_type}</span>
+                  {item.transaction_date ? (
+                    <span>{formatDate(new Date(`${item.transaction_date}T00:00:00`))}</span>
+                  ) : (
+                    <span>고정 항목</span>
+                  )}
+                  {item.category_name && (
+                    <Badge variant={isIncome ? 'income' : 'expense'} className="px-1.5 py-0 text-[10px]">
+                      {item.category_name}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <span className={`shrink-0 text-sm font-semibold ${isIncome ? 'text-accent-dark' : 'text-primary-dark'}`}>
+                {isIncome ? '+' : '-'}{formatKRW(item.amount)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
   )
 }

@@ -24,6 +24,7 @@ export async function getTransactions(filters: {
   categoryId?: string
   type?: TransactionType
   search?: string
+  sort?: 'date' | 'oldest' | 'name'
   page?: number
   pageSize?: number
 }) {
@@ -36,9 +37,20 @@ export async function getTransactions(filters: {
   let query = supabase
     .from('transactions')
     .select('*, expense_categories(name)', { count: 'exact' })
-    .order('transaction_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .range(from, to)
+
+  if (filters.sort === 'name') {
+    query = query
+      .order('description', { ascending: true })
+      .order('transaction_date', { ascending: false })
+  } else if (filters.sort === 'oldest') {
+    query = query
+      .order('transaction_date', { ascending: true })
+      .order('created_at', { ascending: true })
+  } else {
+    query = query
+      .order('transaction_date', { ascending: false })
+      .order('created_at', { ascending: false })
+  }
 
   if (filters.month) {
     const start = `${filters.month}-01`
@@ -63,6 +75,8 @@ export async function getTransactions(filters: {
   if (filters.search) {
     query = query.ilike('description', `%${filters.search}%`)
   }
+
+  query = query.range(from, to)
 
   const { data, error, count } = await query
 

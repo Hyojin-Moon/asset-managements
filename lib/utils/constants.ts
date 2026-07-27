@@ -36,7 +36,6 @@ export const NAV_ITEMS = [
   { label: '지출 관리', href: '/expenses', icon: 'TrendingDown' as const },
   { label: '거래 내역', href: '/transactions', icon: 'Receipt' as const },
   { label: '카드 업로드', href: '/card-upload', icon: 'Upload' as const },
-  { label: '캘린더', href: '/calendar', icon: 'Calendar' as const },
   { label: '저축', href: '/savings', icon: 'PiggyBank' as const },
   { label: '리포트', href: '/reports', icon: 'BarChart3' as const },
   { label: '설정', href: '/settings', icon: 'Settings' as const },

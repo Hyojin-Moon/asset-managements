@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useTransition } from 'react'
 import {
-  TrendingUp, TrendingDown, Upload, Calendar, PiggyBank,
+  TrendingUp, TrendingDown, Upload, PiggyBank,
   Settings, LogOut, ChevronRight, Loader2
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -16,7 +16,6 @@ const MORE_ITEMS = [
   { label: '수입 관리', href: '/income', icon: TrendingUp, color: 'text-income' },
   { label: '지출 관리', href: '/expenses', icon: TrendingDown, color: 'text-expense' },
   { label: '카드 업로드', href: '/card-upload', icon: Upload, color: 'text-secondary' },
-  { label: '캘린더', href: '/calendar', icon: Calendar, color: 'text-info' },
   { label: '저축', href: '/savings', icon: PiggyBank, color: 'text-savings' },
   { label: '설정', href: '/settings', icon: Settings, color: 'text-muted-foreground' },
 ] as const

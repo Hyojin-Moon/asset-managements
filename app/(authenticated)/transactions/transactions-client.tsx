@@ -93,6 +93,8 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
   const activeType = searchParams.get('type') || ''
   const activePerson = searchParams.get('person') || ''
   const activeCategory = searchParams.get('category') || ''
+  const sortParam = searchParams.get('sort')
+  const activeSort = sortParam === 'name' || sortParam === 'oldest' ? sortParam : 'date'
 
   return (
     <div>
@@ -168,6 +170,18 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
             ))}
           </select>
 
+          {/* Sort */}
+          <select
+            value={activeSort}
+            onChange={(e) => updateFilter('sort', e.target.value === 'date' ? '' : e.target.value)}
+            className="h-8 rounded-lg border-2 border-border bg-surface px-2 text-xs"
+            aria-label="거래 내역 정렬"
+          >
+            <option value="date">날짜순 (최신순)</option>
+            <option value="oldest">날짜순 (오래된순)</option>
+            <option value="name">이름순 (가나다순)</option>
+          </select>
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -200,71 +214,41 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
         </Card>
       ) : (
         <div className="space-y-4">
-          {sortedDates.map((dateKey) => (
-            <div key={dateKey}>
-              <div className="text-xs font-semibold text-muted-foreground mb-2 px-1">
-                {formatDate(new Date(dateKey + 'T00:00:00'))}
+          {activeSort === 'name' ? (
+            <Card className="overflow-hidden p-0">
+              <div className="divide-y divide-border/50">
+                {transactions.map((tx) => (
+                  <TransactionRow
+                    key={tx.id}
+                    transaction={tx}
+                    showDate
+                    onEdit={() => setEditItem(tx)}
+                    onDelete={() => setDeleteId({ id: tx.id, name: tx.description })}
+                  />
+                ))}
               </div>
-              <Card className="p-0 overflow-hidden">
-                <div className="divide-y divide-border/50">
-                  {grouped[dateKey].map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-surface-hover transition-colors group"
-                    >
-                      {/* Icon */}
-                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
-                        tx.type === 'income' ? 'bg-accent-bg text-accent-dark' : 'bg-primary-bg text-primary-dark'
-                      }`}>
-                        <span className="text-sm">
-                          {tx.type === 'income' ? '💰' : PERSON_EMOJI[tx.person_type]}
-                        </span>
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">{tx.description}</span>
-                          {tx.is_emergency && <span className="text-[10px]">🚨</span>}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground">{tx.person_type}</span>
-                          {tx.category_name && (
-                            <Badge variant={tx.type === 'income' ? 'income' : 'expense'} className="text-[10px] px-1.5 py-0">
-                              {tx.category_name}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Amount */}
-                      <span className={`font-semibold text-sm shrink-0 ${
-                        tx.type === 'income' ? 'text-accent-dark' : 'text-primary-dark'
-                      }`}>
-                        {tx.type === 'income' ? '+' : '-'}{formatKRW(tx.amount)}
-                      </span>
-
-                      {/* Actions */}
-                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                        <button
-                          onClick={() => setEditItem(tx)}
-                          className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteId({ id: tx.id, name: tx.description })}
-                          className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-error/10 hover:text-error transition-colors"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+            </Card>
+          ) : (
+            (activeSort === 'oldest' ? [...sortedDates].reverse() : sortedDates).map((dateKey) => (
+              <div key={dateKey}>
+                <div className="mb-2 px-1 text-xs font-semibold text-muted-foreground">
+                  {formatDate(new Date(`${dateKey}T00:00:00`))}
                 </div>
-              </Card>
-            </div>
-          ))}
+                <Card className="overflow-hidden p-0">
+                  <div className="divide-y divide-border/50">
+                    {grouped[dateKey].map((tx) => (
+                      <TransactionRow
+                        key={tx.id}
+                        transaction={tx}
+                        onEdit={() => setEditItem(tx)}
+                        onDelete={() => setDeleteId({ id: tx.id, name: tx.description })}
+                      />
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            ))
+          )}
 
           {/* Pagination */}
           {totalCount > 30 && (
@@ -362,6 +346,68 @@ export function TransactionsClient({ transactions, categories, totalCount, curre
           </Button>
         </div>
       </Modal>
+    </div>
+  )
+}
+
+function TransactionRow({ transaction: tx, showDate = false, onEdit, onDelete }: {
+  transaction: Transaction
+  showDate?: boolean
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-hover">
+      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+        tx.type === 'income' ? 'bg-accent-bg text-accent-dark' : 'bg-primary-bg text-primary-dark'
+      }`}>
+        <span className="text-sm">{tx.type === 'income' ? '💰' : PERSON_EMOJI[tx.person_type]}</span>
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium">{tx.description}</span>
+          {tx.is_emergency && <span className="text-[10px]">🚨</span>}
+        </div>
+        <div className="mt-0.5 flex items-center gap-1.5">
+          <span className="text-[10px] text-muted-foreground">{tx.person_type}</span>
+          {showDate && (
+            <span className="text-[10px] text-muted-foreground">
+              {formatDate(new Date(`${tx.transaction_date}T00:00:00`))}
+            </span>
+          )}
+          {tx.category_name && (
+            <Badge variant={tx.type === 'income' ? 'income' : 'expense'} className="px-1.5 py-0 text-[10px]">
+              {tx.category_name}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <span className={`shrink-0 text-sm font-semibold ${
+        tx.type === 'income' ? 'text-accent-dark' : 'text-primary-dark'
+      }`}>
+        {tx.type === 'income' ? '+' : '-'}{formatKRW(tx.amount)}
+      </span>
+
+      <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <button
+          type="button"
+          onClick={onEdit}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label={`${tx.description} 수정`}
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
+          aria-label={`${tx.description} 삭제`}
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
     </div>
   )
 }

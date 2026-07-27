@@ -93,58 +93,6 @@ export interface CardStatementRow {
   created_at: string
 }
 
-export interface Event {
-  id: string
-  family_id: string
-  title: string
-  description?: string | null
-  event_date: string
-  event_end_date?: string | null
-  estimated_cost: number
-  actual_cost: number
-  person_type: PersonType
-  is_recurring: boolean
-  source: 'manual' | 'google'
-  google_event_id?: string | null
-  google_calendar_id?: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface GoogleCalendarConnection {
-  id: string
-  family_id: string
-  user_id: string
-  google_email: string
-  token_expires_at: string
-  default_person_type: PersonType
-  is_owner: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface GoogleCalendarSubscription {
-  id: string
-  connection_id: string
-  family_id: string
-  google_calendar_id: string
-  calendar_name: string
-  background_color?: string | null
-  sync_token?: string | null
-  last_synced_at?: string | null
-  enabled: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface GoogleCalendarListItem {
-  id: string
-  summary: string
-  primary?: boolean
-  backgroundColor?: string
-  accessRole?: string
-}
-
 export interface MonthlySummary {
   id?: string
   family_id?: string
@@ -211,7 +159,6 @@ export interface DashboardData {
   current_month: MonthlySummary
   previous_month: MonthlySummary
   recent_transactions: Transaction[]
-  upcoming_events: Event[]
   savings_accounts: SavingsAccount[]
   monthly_trend: { month: string; income: number; expense: number }[]
 }
@@ -233,6 +180,17 @@ export interface MonthlySavingsData {
   totalTarget: number
 }
 
+export interface MonthlyReportDetail {
+  id: string
+  description: string
+  amount: number
+  person_type: PersonType
+  category_name?: string | null
+  transaction_date?: string | null
+  memo?: string | null
+  source: 'transaction' | 'budget'
+}
+
 export interface MonthlyReportData {
   month: string
   totalIncome: number
@@ -247,6 +205,8 @@ export interface MonthlyReportData {
   dailyExpenses: { date: string; amount: number }[]
   categoryBudgetStatus: CategoryBudgetStatus[]
   savings: MonthlySavingsData
+  incomeDetails: MonthlyReportDetail[]
+  expenseDetails: MonthlyReportDetail[]
 }
 
 export interface QuarterlyReportData {
@@ -309,17 +269,6 @@ export interface CreateTransactionInput {
   card_provider?: CardProvider
   card_statement_row_id?: string
   memo?: string
-}
-
-export interface CreateEventInput {
-  title: string
-  description?: string
-  event_date: string
-  event_end_date?: string
-  estimated_cost?: number
-  actual_cost?: number
-  person_type: PersonType
-  is_recurring?: boolean
 }
 
 export interface CreateSavingsAccountInput {

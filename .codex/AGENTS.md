@@ -1,6 +1,8 @@
-# CLAUDE.md
+<!-- Migrated from /Users/m/Desktop/my/asset-managements/CLAUDE.md on 2026-06-25. -->
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# AGENTS.md
+
+This file provides guidance to Codex (codex.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -107,11 +109,11 @@ types/index.ts                     # 모든 공유 타입 (snake_case 필드명,
 - `savings_accounts`, `savings_transactions`
 - `category_mapping_rules`
 
-상세 스키마/RLS/시드 데이터: `.claude/docs/DATABASE.md`
+상세 스키마/RLS/시드 데이터: `.codex/docs/DATABASE.md`
 
 ## Implementation Phases
 
-7단계 구현 계획 (`.claude/docs/IMPLEMENTATION.md`):
+7단계 구현 계획 (`.codex/docs/IMPLEMENTATION.md`):
 1. **Foundation** (완료): 프로젝트 셋업, 인증, 레이아웃, UI 컴포넌트, 타입
 2. **예산 관리**: 수입/지출 CRUD, 카테고리 관리
 3. **거래 추적**: 거래 CRUD, 필터, 월별 요약
@@ -120,7 +122,7 @@ types/index.ts                     # 모든 공유 타입 (snake_case 필드명,
 6. **저축**: 저축 관리
 7. **마무리**: 모바일 최적화, 에러처리, 배포
 
-## Design Docs (`.claude/docs/`)
+## Design Docs (`.codex/docs/`)
 
 - `DESIGN.md` — 전체 설계, 기술 스택, 아키텍처, 기능 목록, 프로젝트 구조
 - `DATABASE.md` — DB 스키마, RLS 정책, 시드 데이터, SQL 함수, ER 다이어그램

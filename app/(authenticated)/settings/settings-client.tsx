@@ -18,29 +18,21 @@ import { PERSON_TYPES, PERSON_BG_CLASSES } from '@/lib/utils/constants'
 import { createCategory, updateCategory, deleteCategory } from '@/lib/actions/categories'
 import {
   createMappingRule, updateMappingRule, deleteMappingRule,
-  exportTransactionsCSV, exportBudgetCSV, exportEventsCSV,
+  exportTransactionsCSV, exportBudgetCSV,
 } from '@/lib/actions/settings'
 import { logout } from '@/lib/actions/auth'
-import type {
-  ExpenseCategory, CategoryMappingRule, Profile, PersonType,
-  GoogleCalendarConnection, GoogleCalendarSubscription,
-} from '@/types'
-import { GoogleCalendarSection } from './google-calendar-section'
+import type { ExpenseCategory, CategoryMappingRule, Profile, PersonType } from '@/types'
 
 interface Props {
   categories: ExpenseCategory[]
   mappingRules: CategoryMappingRule[]
   profile: Profile | null
-  googleConnection: GoogleCalendarConnection | null
-  googleSubscriptions: GoogleCalendarSubscription[]
 }
 
 export function SettingsClient({
   categories,
   mappingRules,
   profile,
-  googleConnection,
-  googleSubscriptions,
 }: Props) {
   return (
     <div className="space-y-6">
@@ -51,10 +43,6 @@ export function SettingsClient({
 
       <CategorySection categories={categories} />
       <MappingRulesSection rules={mappingRules} categories={categories} />
-      <GoogleCalendarSection
-        connection={googleConnection}
-        subscriptions={googleSubscriptions}
-      />
       <DataExportSection />
       <AccountSection profile={profile} />
     </div>
@@ -455,7 +443,7 @@ function DataExportSection() {
     URL.revokeObjectURL(url)
   }
 
-  function handleExport(type: 'transactions' | 'budget' | 'events') {
+  function handleExport(type: 'transactions' | 'budget') {
     startTransition(async () => {
       let result
       let filename: string
@@ -467,10 +455,6 @@ function DataExportSection() {
         case 'budget':
           result = await exportBudgetCSV()
           filename = `예산항목_${new Date().toISOString().slice(0, 10)}.csv`
-          break
-        case 'events':
-          result = await exportEventsCSV()
-          filename = `이벤트_${new Date().toISOString().slice(0, 10)}.csv`
           break
       }
 
@@ -513,15 +497,6 @@ function DataExportSection() {
           >
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             예산항목 내보내기
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExport('events')}
-            disabled={isPending}
-          >
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            이벤트 내보내기
           </Button>
         </div>
       </CardContent>

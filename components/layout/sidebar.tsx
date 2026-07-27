@@ -6,13 +6,13 @@ import { cn } from '@/lib/utils/cn'
 import { NAV_ITEMS } from '@/lib/utils/constants'
 import {
   LayoutDashboard, TrendingUp, TrendingDown, Receipt,
-  Upload, Calendar, PiggyBank, BarChart3, Settings, LogOut,
+  Upload, PiggyBank, BarChart3, Settings, LogOut,
 } from 'lucide-react'
 import { logout } from '@/lib/actions/auth'
 
 const ICON_MAP = {
   LayoutDashboard, TrendingUp, TrendingDown, Receipt,
-  Upload, Calendar, PiggyBank, BarChart3, Settings,
+  Upload, PiggyBank, BarChart3, Settings,
 } as const
 
 interface SidebarProps {
