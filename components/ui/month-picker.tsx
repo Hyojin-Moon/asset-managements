@@ -19,11 +19,6 @@ export function MonthPicker({ currentDate, onPrev, onNext, onChange }: MonthPick
   const [viewYear, setViewYear] = useState(currentDate.getFullYear())
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Sync viewYear when currentDate changes
-  useEffect(() => {
-    setViewYear(currentDate.getFullYear())
-  }, [currentDate])
-
   // Close on outside click
   useEffect(() => {
     if (!open) return
@@ -56,7 +51,11 @@ export function MonthPicker({ currentDate, onPrev, onNext, onChange }: MonthPick
 
       {onChange ? (
         <button
-          onClick={() => setOpen(!open)}
+          onClick={() => {
+            const nextOpen = !open
+            if (nextOpen) setViewYear(currentDate.getFullYear())
+            setOpen(nextOpen)
+          }}
           className={cn(
             'text-lg font-bold text-foreground min-w-[140px] text-center',
             'flex items-center justify-center gap-2',

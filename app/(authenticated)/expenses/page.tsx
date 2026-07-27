@@ -8,5 +8,6 @@ export default async function ExpensesPage() {
     getCategories(),
   ])
 
-  return <ExpensesClient items={items} categories={categories} />
+  const itemsKey = items.map((item) => `${item.id}:${item.updated_at}:${item.sort_order}`).join('|')
+  return <ExpensesClient key={itemsKey} items={items} categories={categories} />
 }

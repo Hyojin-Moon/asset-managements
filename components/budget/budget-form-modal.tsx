@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
@@ -29,21 +29,9 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
     : `${isExpense ? '지출' : '수입'} 항목 추가`
 
   const [pending, setPending] = useState(false)
-  const [form, setForm] = useState({
-    person_type: '공통' as PersonType,
-    category_id: '',
-    name: '',
-    amount: '',
-    recurrence: 'monthly' as 'monthly' | 'one_time',
-    effective_from: new Date().toISOString().slice(0, 7),
-    effective_until: '',
-    memo: '',
-    auto_generate: false,
-  })
-
-  useEffect(() => {
+  const [form, setForm] = useState(() => {
     if (editItem) {
-      setForm({
+      return {
         person_type: editItem.person_type,
         category_id: editItem.category_id || '',
         name: editItem.name,
@@ -53,21 +41,20 @@ export function BudgetFormModal({ open, onClose, type, editItem, categories }: B
         effective_until: editItem.effective_until?.slice(0, 7) || '',
         memo: editItem.memo || '',
         auto_generate: editItem.auto_generate ?? false,
-      })
-    } else {
-      setForm({
-        person_type: '공통',
-        category_id: '',
-        name: '',
-        amount: '',
-        recurrence: 'monthly',
-        effective_from: new Date().toISOString().slice(0, 7),
-        effective_until: '',
-        memo: '',
-        auto_generate: false,
-      })
+      }
     }
-  }, [editItem, open])
+    return {
+      person_type: '공통' as PersonType,
+      category_id: '',
+      name: '',
+      amount: '',
+      recurrence: 'monthly' as 'monthly' | 'one_time',
+      effective_from: new Date().toISOString().slice(0, 7),
+      effective_until: '',
+      memo: '',
+      auto_generate: false,
+    }
+  })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Header } from '@/components/layout/header'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -249,12 +249,14 @@ export function SavingsClient({ initialAccounts }: SavingsClientProps) {
       )}
 
       {/* Account Form Modal */}
-      <AccountFormModal
-        open={formOpen}
-        onClose={() => { setFormOpen(false); setEditAccount(null) }}
-        editAccount={editAccount}
-        onSaved={refresh}
-      />
+      {formOpen && (
+        <AccountFormModal
+          open
+          onClose={() => { setFormOpen(false); setEditAccount(null) }}
+          editAccount={editAccount}
+          onSaved={refresh}
+        />
+      )}
 
       {/* Transaction Modal */}
       {txModalAccount && (
@@ -305,30 +307,22 @@ function AccountFormModal({
   const isEdit = !!editAccount
   const [pending, setPending] = useState(false)
 
-  const [form, setForm] = useState({
-    name: '',
-    person_type: '공통' as PersonType,
-    target_amount: '',
-    description: '',
-  })
-
-  useEffect(() => {
+  const [form, setForm] = useState(() => {
     if (editAccount) {
-      setForm({
+      return {
         name: editAccount.name,
         person_type: editAccount.person_type,
         target_amount: editAccount.target_amount > 0 ? editAccount.target_amount.toLocaleString() : '',
         description: editAccount.description || '',
-      })
-    } else {
-      setForm({
-        name: '',
-        person_type: '공통',
-        target_amount: '',
-        description: '',
-      })
+      }
     }
-  }, [editAccount, open])
+    return {
+      name: '',
+      person_type: '공통' as PersonType,
+      target_amount: '',
+      description: '',
+    }
+  })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -442,14 +436,6 @@ function TransactionFormModal({
     description: '',
     transaction_date: today,
   })
-
-  useEffect(() => {
-    setForm({
-      amount: '',
-      description: '',
-      transaction_date: today,
-    })
-  }, [open, today])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

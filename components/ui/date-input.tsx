@@ -41,13 +41,6 @@ export function DateInput({ id, label, value, onChange, required, placeholder = 
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
 
-  // Sync viewMonth when value changes externally
-  useEffect(() => {
-    if (value) {
-      setViewMonth(startOfMonth(parseISO(value)))
-    }
-  }, [value])
-
   // Build calendar grid
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(viewMonth)
@@ -79,7 +72,7 @@ export function DateInput({ id, label, value, onChange, required, placeholder = 
     <div className="flex flex-col gap-1.5" ref={containerRef}>
       {label && (
         <label htmlFor={id} className="text-sm font-medium text-foreground/80">
-          {label}
+          {label}{required && <span className="text-error"> *</span>}
         </label>
       )}
 
@@ -87,7 +80,11 @@ export function DateInput({ id, label, value, onChange, required, placeholder = 
         <button
           type="button"
           id={id}
-          onClick={() => setOpen(!open)}
+          onClick={() => {
+            const nextOpen = !open
+            if (nextOpen && value) setViewMonth(startOfMonth(parseISO(value)))
+            setOpen(nextOpen)
+          }}
           className={cn(
             'h-11 w-full rounded-xl border-2 border-border bg-surface px-4 text-sm text-left',
             'transition-all duration-200 flex items-center justify-between',

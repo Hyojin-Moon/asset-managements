@@ -16,6 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router) + TypeScript + React 19
+- **Runtime**: Node.js 24 LTS
 - **Styling**: Tailwind CSS v4 (PostCSS plugin, `@theme inline` in globals.css)
 - **Backend/DB**: Supabase (PostgreSQL + Auth + RLS), `@supabase/ssr` for cookie-based sessions
 - **Deployment**: Vercel
@@ -33,7 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **읽기**: Server Component에서 Supabase 직접 쿼리
 - **쓰기**: Server Actions (`'use server'`)를 통한 mutation → `revalidatePath()` 호출
-- **인증**: Supabase Auth (이메일/비밀번호), `middleware.ts`에서 미인증 → `/login` 리다이렉트, 인증됨 + `/login` → `/dashboard`, 루트 `/` → `/dashboard`
+- **인증**: Supabase Auth (이메일/비밀번호), `proxy.ts`에서 미인증 → `/login` 리다이렉트, 인증됨 + `/login` → `/dashboard`, 루트 `/` → `/dashboard`
 - **RLS**: 모든 테이블에 `family_id` 기반 Row Level Security. `get_my_family_id()` PostgreSQL 함수로 격리
 - **Supabase 클라이언트**: 서버용 `lib/supabase/server.ts` (createServerClient + cookies), 브라우저용 `lib/supabase/client.ts` (createBrowserClient)
 
@@ -66,7 +67,7 @@ lib/
     ├── format.ts                  # formatKRW, formatKRWShort, formatPercent, formatSignedKRW
     ├── date.ts                    # date-fns 기반 날짜 유틸 (ko locale)
     └── constants.ts               # PERSON_TYPES, PERSON_COLORS, NAV_ITEMS, MOBILE_NAV_ITEMS, CHART_COLORS
-middleware.ts                      # Supabase Auth 미들웨어 (세션 리프레시 + 리다이렉트)
+proxy.ts                           # Supabase Auth 프록시 (세션 리프레시 + 리다이렉트)
 types/index.ts                     # 모든 공유 타입 (snake_case 필드명, DB 컬럼명과 일치)
 ```
 

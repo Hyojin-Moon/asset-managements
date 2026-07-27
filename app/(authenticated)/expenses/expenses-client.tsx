@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
@@ -36,11 +36,6 @@ export function ExpensesClient({ items: initialItems, categories }: { items: Bud
   } | null>(null)
 
   const currentMonth = new Date().toISOString().slice(0, 7)
-
-  // items가 서버에서 새로 넘어오면 동기화
-  useEffect(() => {
-    setItems(initialItems)
-  }, [initialItems])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -380,13 +375,15 @@ export function ExpensesClient({ items: initialItems, categories }: { items: Bud
       )}
 
       {/* Modals */}
-      <BudgetFormModal
-        open={formOpen}
-        onClose={() => { setFormOpen(false); setEditItem(null) }}
-        type="expense"
-        editItem={editItem}
-        categories={categories}
-      />
+      {formOpen && (
+        <BudgetFormModal
+          open
+          onClose={() => { setFormOpen(false); setEditItem(null) }}
+          type="expense"
+          editItem={editItem}
+          categories={categories}
+        />
+      )}
 
       {deleteItem && (
         <DeleteConfirmModal

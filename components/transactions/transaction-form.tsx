@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -21,21 +21,9 @@ interface TransactionFormProps {
 export function TransactionForm({ categories, editItem, onSuccess, onCancel, defaultType }: TransactionFormProps) {
   const isEdit = !!editItem
   const [pending, setPending] = useState(false)
-  const [form, setForm] = useState({
-    type: (defaultType ?? 'expense') as TransactionType,
-    person_type: '공통' as PersonType,
-    category_id: '',
-    description: '',
-    amount: '',
-    transaction_date: new Date().toISOString().slice(0, 10),
-    is_emergency: false,
-    card_provider: '' as string,
-    memo: '',
-  })
-
-  useEffect(() => {
+  const [form, setForm] = useState(() => {
     if (editItem) {
-      setForm({
+      return {
         type: editItem.type,
         person_type: editItem.person_type,
         category_id: editItem.category_id || '',
@@ -45,9 +33,20 @@ export function TransactionForm({ categories, editItem, onSuccess, onCancel, def
         is_emergency: editItem.is_emergency,
         card_provider: editItem.card_provider || '',
         memo: editItem.memo || '',
-      })
+      }
     }
-  }, [editItem])
+    return {
+      type: (defaultType ?? 'expense') as TransactionType,
+      person_type: '공통' as PersonType,
+      category_id: '',
+      description: '',
+      amount: '',
+      transaction_date: new Date().toISOString().slice(0, 10),
+      is_emergency: false,
+      card_provider: '',
+      memo: '',
+    }
+  })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
